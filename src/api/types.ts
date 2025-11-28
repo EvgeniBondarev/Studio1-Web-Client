@@ -32,8 +32,18 @@ export interface EtPart {
   Dead?: boolean
 }
 
+export interface EtStringEntry {
+  Id: number
+  ProducerId: number
+  OldId?: number
+  IdStr: number
+  Lng?: number
+  Text?: string
+}
+
 export interface ODataListResponse<T> {
   '@odata.count'?: number
+  '@odata.nextLink'?: string
   value: T[]
 }
 

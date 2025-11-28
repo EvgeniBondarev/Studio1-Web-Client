@@ -1,5 +1,7 @@
-import { Descriptions, Divider, Drawer, Space, Tag, Typography } from 'antd'
+import { Descriptions, Divider, Drawer, Space, Spin, Tag, Typography } from 'antd'
+import { useQuery } from '@tanstack/react-query'
 import type { EtPart, EtProducer } from '../api/types.ts'
+import { fetchStringsByIds } from '../api/parts.ts'
 
 interface PartDetailsDrawerProps {
   producer?: EtProducer | null
@@ -10,6 +12,30 @@ interface PartDetailsDrawerProps {
 const booleanLabel = (value?: boolean) => (value ? 'Да' : 'Нет')
 
 export const PartDetailsDrawer = ({ producer, part, onClose }: PartDetailsDrawerProps) => {
+  const {
+    data: strings = {},
+    isFetching,
+  } = useQuery<Record<number, string>>({
+    queryKey: ['partStrings', producer?.Id, part?.Id, part?.Name, part?.Description],
+    queryFn: () =>
+      producer && part
+        ? fetchStringsByIds(producer.Id, [part.Name, part.Description])
+        : Promise.resolve<Record<number, string>>({}),
+    enabled: Boolean(producer?.Id && part && (part.Name || part.Description)),
+  })
+
+  const getText = (id?: number) => {
+    if (!id) {
+      return '—'
+    }
+
+    if (strings && strings[id]) {
+      return strings[id]
+    }
+
+    return isFetching ? <Spin size="small" /> : id
+  }
+
   return (
     <Drawer
       title="Карточка детали"
@@ -33,10 +59,8 @@ export const PartDetailsDrawer = ({ producer, part, onClose }: PartDetailsDrawer
             <Descriptions.Item label="Длинный код">{part.LongCode ?? '—'}</Descriptions.Item>
             <Descriptions.Item label="Вес">{part.Weight ?? '—'}</Descriptions.Item>
             <Descriptions.Item label="Сессия">{part.SessionId ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label="Идентификатор имени">{part.Name ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label="Идентификатор описания">
-              {part.Description ?? '—'}
-            </Descriptions.Item>
+            <Descriptions.Item label="Наименование">{getText(part.Name)}</Descriptions.Item>
+            <Descriptions.Item label="Описание">{getText(part.Description)}</Descriptions.Item>
             <Descriptions.Item label="Объём">{part.V ?? '—'}</Descriptions.Item>
             <Descriptions.Item label="Старый ID">{part.OldId ?? '—'}</Descriptions.Item>
           </Descriptions>

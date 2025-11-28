@@ -1,23 +1,75 @@
-import { odataClient, escapeODataValue, type ODataQueryOptions } from './odataClient.ts'
-import type { EtPart } from './types.ts'
+import { odataClient, type ODataQueryOptions } from './odataClient.ts'
+import type { EtPart, EtStringEntry, ODataListResponse } from './types.ts'
 
-export const fetchParts = async (producerId: number, search?: string) => {
-  const searchFilter = search
-    ? ` and (contains(Code,'${escapeODataValue(search)}') or contains(LongCode,'${escapeODataValue(
-        search,
-      )}') or contains(cast(Name,'Edm.String'),'${escapeODataValue(search)}'))`
-    : ''
+const PARTS_PAGE_SIZE = 200
 
-  const filter = `ProducerId eq ${producerId}${searchFilter}`
+const buildPartsFilter = (producerId: number) => `ProducerId eq ${producerId}`
 
-  const options: ODataQueryOptions = {
-    filter,
-    orderBy: 'LongCode',
-    top: 200,
+export interface PartsPageResult {
+  items: EtPart[]
+  total?: number
+  nextLink?: string
+}
+
+export const fetchPartsPage = async (producerId: number, nextLink?: string): Promise<PartsPageResult> => {
+  const response = nextLink
+    ? await odataClient.fetchByUrl<ODataListResponse<EtPart>>(nextLink)
+    : await odataClient.list<EtPart>('Parts', {
+        filter: buildPartsFilter(producerId),
+        orderBy: 'LongCode',
+        top: PARTS_PAGE_SIZE,
+      } satisfies ODataQueryOptions)
+
+  return {
+    items: response.value,
+    total: response['@odata.count'],
+    nextLink: response['@odata.nextLink'],
+  }
+}
+
+export const fetchPartsCount = async (producerId: number) => {
+  const data = await odataClient.list<EtPart>('Parts', {
+    filter: buildPartsFilter(producerId),
+    top: 0,
+  })
+  return data['@odata.count'] ?? 0
+}
+
+export const fetchStringsByIds = async (
+  producerId: number,
+  ids: Array<number | undefined>,
+  chunkSize = 5,
+): Promise<Record<number, string>> => {
+  const validIds = Array.from(new Set(ids.filter((id): id is number => typeof id === 'number')))
+  if (!validIds.length) {
+    return {}
   }
 
-  const data = await odataClient.list<EtPart>('Parts', options)
-  return data.value
+  const result: Record<number, string> = {}
+
+  for (let index = 0; index < validIds.length; index += chunkSize) {
+    const chunk = validIds.slice(index, index + chunkSize)
+    const idFilter = chunk.map((id) => `IdStr eq ${id}`).join(' or ')
+    const filter = `(ProducerId eq ${producerId}) and (${idFilter})`
+
+    const options: ODataQueryOptions = {
+      filter,
+      select: 'IdStr,Text',
+      top: chunk.length,
+    }
+
+    const response = await odataClient.list<EtStringEntry>('Strings', options)
+    response.value.forEach((entry) => {
+      if (typeof entry.IdStr === 'number') {
+        const text = entry.Text?.trim()
+        if (text) {
+          result[entry.IdStr] = text
+        }
+      }
+    })
+  }
+
+  return result
 }
 
 export const createPart = (payload: Partial<EtPart>) => odataClient.create<EtPart>('Parts', payload)

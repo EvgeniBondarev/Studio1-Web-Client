@@ -12,7 +12,7 @@ export interface ODataQueryOptions {
 }
 
 // ЗАШИТЫЙ URL API
-const baseURL = '/api'
+const baseURL = '/api' //'http://localhost:7091/odata' 
 const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({
@@ -84,5 +84,10 @@ export const odataClient = {
 
   async remove(resource: string, id: number | string, config?: AxiosRequestConfig) {
     await client.delete(`/${resource}(${id})`, config)
+  },
+
+  async fetchByUrl<T>(url: string, config?: AxiosRequestConfig) {
+    const response = await client.get<T>(url, config)
+    return response.data
   },
 }
