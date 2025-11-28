@@ -3,7 +3,34 @@ import type { EtPart, EtStringEntry, ODataListResponse } from './types.ts'
 
 const PARTS_PAGE_SIZE = 200
 
-const buildPartsFilter = (producerId: number) => `ProducerId eq ${producerId}`
+const buildPartsFilter = (producerId: number, codeFilter?: string, filterMode: 'exact' | 'startsWith' | 'endsWith' | 'contains' = 'exact') => {
+  const producerFilter = `ProducerId eq ${producerId}`
+  
+  if (!codeFilter) {
+    return producerFilter
+  }
+  
+  const escapedTerm = codeFilter.replace(/'/g, "''")
+  let codeFilterClause: string
+  
+  switch (filterMode) {
+    case 'startsWith':
+      codeFilterClause = `startsWith(Code,'${escapedTerm}')`
+      break
+    case 'endsWith':
+      codeFilterClause = `endsWith(Code,'${escapedTerm}')`
+      break
+    case 'contains':
+      codeFilterClause = `contains(Code,'${escapedTerm}')`
+      break
+    case 'exact':
+    default:
+      codeFilterClause = `Code eq '${escapedTerm}'`
+      break
+  }
+  
+  return `${producerFilter} and ${codeFilterClause}`
+}
 
 export interface PartsPageResult {
   items: EtPart[]
@@ -11,11 +38,16 @@ export interface PartsPageResult {
   nextLink?: string
 }
 
-export const fetchPartsPage = async (producerId: number, nextLink?: string): Promise<PartsPageResult> => {
+export const fetchPartsPage = async (
+  producerId: number,
+  nextLink?: string,
+  codeFilter?: string,
+  filterMode: 'exact' | 'startsWith' | 'endsWith' | 'contains' = 'exact',
+): Promise<PartsPageResult> => {
   const response = nextLink
     ? await odataClient.fetchByUrl<ODataListResponse<EtPart>>(nextLink)
     : await odataClient.list<EtPart>('Parts', {
-        filter: buildPartsFilter(producerId),
+        filter: buildPartsFilter(producerId, codeFilter, filterMode),
         orderBy: 'LongCode',
         top: PARTS_PAGE_SIZE,
       } satisfies ODataQueryOptions)

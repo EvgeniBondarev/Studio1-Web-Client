@@ -8,9 +8,8 @@ import type { EtPart, EtProducer } from '../api/types.ts'
 import { createPart, deletePart, fetchPartsPage, fetchPartsPageWithoutProducer, fetchStringsByIds, updatePart } from '../api/parts.ts'
 import type { PartsPageResult } from '../api/parts.ts'
 import { fetchProducerById } from '../api/producers.ts'
-import { partFields } from '../config/resources.ts'
-import { EntityFormModal } from './EntityFormModal.tsx'
 import { PartDetailsDrawer } from './PartDetailsDrawer.tsx'
+import { PartFormModal } from './PartFormModal.tsx'
 
 type SearchType = 'by_producer' | 'without_producer'
 type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -75,9 +74,19 @@ export const PartsPanel = ({
       if (searchType === 'without_producer') {
         return fetchPartsPageWithoutProducer(search || undefined, 'exact', pageParam as string | undefined)
       }
-      return producer ? fetchPartsPage(producer.Id, pageParam as string | undefined) : Promise.resolve(undefined)
+      return producer
+        ? fetchPartsPage(
+            producer.Id,
+            pageParam as string | undefined,
+            search?.trim() || undefined,
+            codeFilterMode,
+          )
+        : Promise.resolve(undefined)
     },
-    enabled: searchType === 'without_producer' ? Boolean(search?.trim()) : Boolean(producer?.Id),
+    enabled:
+      searchType === 'without_producer'
+        ? Boolean(search?.trim()) // Для "without_producer" ждем debounce
+        : Boolean(producer?.Id), // Для "by_producer" нужен только producer
     getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
     initialPageParam: undefined as string | undefined,
   })
@@ -96,6 +105,21 @@ export const PartsPanel = ({
   useEffect(() => {
     tableContainerRef.current?.scrollTo({ top: 0 })
   }, [producer?.Id])
+
+  // Динамический поиск при вводе для обоих режимов с debounce
+  useEffect(() => {
+    // Для режима "without_producer" добавляем debounce, чтобы не делать запрос при каждом символе
+    if (searchType === 'without_producer') {
+      const timer = setTimeout(() => {
+        setSearch(searchInput.trim())
+      }, 500) // Задержка 500мс
+
+      return () => clearTimeout(timer)
+    } else if (searchType === 'by_producer') {
+      // Для режима "by_producer" поиск происходит сразу (фильтрация на клиенте)
+      setSearch(searchInput.trim())
+    }
+  }, [searchInput, searchType])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -183,45 +207,24 @@ export const PartsPanel = ({
 
   const getStringValue = (id?: number) => (id ? stringsMap[id] : undefined)
 
-  const matchesCodeByMode = (code?: string | null) => {
-    if (!rawSearchTerm) {
-      return false
-    }
-    const codeValue = code?.toLowerCase() ?? ''
-    switch (codeFilterMode) {
-      case 'startsWith':
-        return codeValue.startsWith(rawSearchTerm)
-      case 'endsWith':
-        return codeValue.endsWith(rawSearchTerm)
-      case 'contains':
-        return codeValue.includes(rawSearchTerm)
-      case 'exact':
-      default:
-        return codeValue === rawSearchTerm
-    }
-  }
-
   const filteredParts = useMemo(() => {
     // Если поиск без производителя, фильтрация уже выполнена на сервере
     if (searchType === 'without_producer') {
       return parts
     }
 
-    // Для поиска по производителю применяем локальную фильтрацию
+    // Для поиска по производителю Code уже отфильтрован на сервере
+    // Применяем локальную фильтрацию только для остальных полей
     if (!rawSearchTerm && !normalizedSearchTerm) {
       return parts
     }
 
     return parts.filter((part) => {
-      const matchesCodeFilter = matchesCodeByMode(part.Code)
-      if (matchesCodeFilter) {
-        return true
-      }
-
+      // Code уже отфильтрован на сервере по выбранному режиму
+      // Проверяем только остальные поля (LongCode, Name, Description)
       const stringName = getStringValue(part.Name)
       const stringDescription = getStringValue(part.Description)
       const rawCandidates = [
-        toLowerValue(part.Code),
         toLowerValue(part.LongCode),
         toLowerValue(stringName),
         toLowerValue(stringDescription),
@@ -236,7 +239,6 @@ export const PartsPanel = ({
       }
 
       const normalizedCandidates = [
-        normalizeValue(part.Code),
         normalizeValue(part.LongCode),
         normalizeValue(stringName),
         normalizeValue(stringDescription),
@@ -258,15 +260,35 @@ export const PartsPanel = ({
   }
 
   const resolvedTotalCount = totalParts ?? (hasProducer ? parts.length : undefined)
-  const countLabel = !producer
-    ? '—'
-    : trimmedSearch
-      ? `${filteredParts.length.toLocaleString('ru-RU')} / ${
-          resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
-        }`
-      : resolvedTotalCount !== undefined
-        ? resolvedTotalCount.toLocaleString('ru-RU')
-        : '...'
+  
+  // Для режима "without_producer" показываем общее количество и количество на странице
+  const countLabel = (() => {
+    if (searchType === 'without_producer') {
+      if (!search?.trim()) {
+        return '—'
+      }
+      // Для режима "without_producer" filteredParts = parts (фильтрация на сервере)
+      // parts.length - количество на текущей странице (все загруженные страницы)
+      const currentPageCount = parts.length
+      const total = resolvedTotalCount !== undefined ? resolvedTotalCount : '...'
+      return `${currentPageCount.toLocaleString('ru-RU')} / ${typeof total === 'number' ? total.toLocaleString('ru-RU') : total}`
+    }
+    
+    // Для режима "by_producer"
+    if (!producer) {
+      return '—'
+    }
+    
+    if (trimmedSearch) {
+      // При поиске показываем отфильтрованные / общее
+      return `${filteredParts.length.toLocaleString('ru-RU')} / ${
+        resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
+      }`
+    }
+    
+    // Без поиска показываем только общее количество
+    return resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
+  })()
   const initialLoading = isLoading && !parts.length
 
   const renderStringValue = (id?: number) => {
@@ -319,7 +341,7 @@ export const PartsPanel = ({
     mutationFn: createPart,
     onSuccess: () => {
       message.success('Деталь добавлена')
-      queryClient.invalidateQueries({ queryKey: ['parts', producer?.Id] })
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       closeModal()
     },
   })
@@ -328,7 +350,7 @@ export const PartsPanel = ({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
     onSuccess: () => {
       message.success('Деталь сохранена')
-      queryClient.invalidateQueries({ queryKey: ['parts', producer?.Id] })
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       closeModal()
     },
   })
@@ -337,7 +359,7 @@ export const PartsPanel = ({
     mutationFn: (id: number) => deletePart(id),
     onSuccess: (_, id) => {
       message.success('Деталь удалена')
-      queryClient.invalidateQueries({ queryKey: ['parts', producer?.Id] })
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       if (selectedPart?.Id === id) {
         onSelectPart(null)
       }
@@ -441,13 +463,13 @@ export const PartsPanel = ({
       },
       sortDirections: ['ascend', 'descend'],
       render: (value: string) => (
-        <Typography.Text
-          strong
+          <Typography.Text
+            strong
           style={{ cursor: value ? 'copy' : 'default', display: 'block', lineHeight: '1.2' }}
-          onClick={(event) => handleCopy(event, value)}
-        >
-          {value ?? '-'}
-        </Typography.Text>
+            onClick={(event) => handleCopy(event, value)}
+          >
+            {value ?? '-'}
+          </Typography.Text>
       ),
     },
     ...(searchType === 'without_producer'
@@ -482,7 +504,7 @@ export const PartsPanel = ({
                 </Typography.Link>
               )
             },
-          },
+    },
         ]
       : []),
     {
@@ -560,14 +582,14 @@ export const PartsPanel = ({
         pagination={false}
         onRow={(record) => {
           return {
-            onClick: () => onSelectPart(record),
+          onClick: () => onSelectPart(record),
             className: (() => {
-              const isActive = record.Id === selectedPart?.Id
-              const isAccepted = record.Accepted
-              if (isActive) {
-                return 'table-row--active'
-              }
-              return isAccepted ? '' : 'table-row--inactive'
+          const isActive = record.Id === selectedPart?.Id
+          const isAccepted = record.Accepted
+          if (isActive) {
+            return 'table-row--active'
+          }
+          return isAccepted ? '' : 'table-row--inactive'
             })(),
             'data-part-id': record.Id,
           }
@@ -638,14 +660,16 @@ export const PartsPanel = ({
           <Typography.Title level={5} style={{ margin: 0 }}>
             Детали
           </Typography.Title>
-          {producer && (
-            <>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Производитель: {producer.Name ?? producer.Prefix}
-              </Typography.Text>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>Деталей: {countLabel}</Typography.Text>
-            </>
+          {searchType === 'by_producer' && producer && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Производитель: {producer.Name ?? producer.Prefix}
+            </Typography.Text>
           )}
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {searchType === 'without_producer' && search?.trim()
+              ? `Найдено: ${countLabel}`
+              : `Деталей: ${countLabel}`}
+          </Typography.Text>
         </Space>
         <Space size={4}>
           <Button
@@ -668,21 +692,27 @@ export const PartsPanel = ({
       </Flex>
 
       <div style={{ position: 'relative' }}>
-        <Input.Search
-          placeholder="Поиск по коду"
-          allowClear
+      <Input.Search
+        placeholder="Поиск по коду"
+        allowClear
           size="small"
           value={searchInput}
           onChange={(event) => {
             const { value } = event.target
             setSearchInput(value)
+            // Поиск происходит динамически через useEffect для обоих режимов
+            // Для режима "without_producer" с debounce, для "by_producer" сразу
             if (!value) {
               setSearch('')
             }
           }}
-          onSearch={(value) => setSearch(value.trim())}
+          onSearch={(value) => {
+            // При нажатии Enter или кнопки поиска сразу применяем фильтр
+            setSearch(value.trim())
+            setSearchInput(value.trim())
+          }}
           disabled={searchType === 'by_producer' && !producer}
-          className="panel-search"
+        className="panel-search"
           addonAfter={
             <Select
               value={searchType}
@@ -705,8 +735,7 @@ export const PartsPanel = ({
                 value={codeFilterMode}
                 onChange={(value) => {
                   setCodeFilterMode(value)
-                  setSearch('')
-                  setSearchInput('')
+                  // Не сбрасываем поиск, пересчет произойдет автоматически через useMemo
                 }}
                 size="small"
                 style={{ width: 170 }}
@@ -728,14 +757,13 @@ export const PartsPanel = ({
 
       <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)} />
 
-      <EntityFormModal<EtPart>
-        title={editingPart ? 'Редактирование детали' : 'Новая деталь'}
+      <PartFormModal
         open={isModalOpen}
+        mode={editingPart ? 'edit' : 'create'}
+        initialValues={editingPart ?? { Rating: 0 }}
+        loading={createMutation.isPending || updateMutation.isPending}
         onCancel={closeModal}
         onSubmit={handleSubmit}
-        fields={partFields}
-        loading={createMutation.isPending || updateMutation.isPending}
-        initialValues={editingPart ?? { Weight: 0 }}
       />
     </Flex>
   )
