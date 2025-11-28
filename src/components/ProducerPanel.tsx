@@ -148,6 +148,7 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
           </Typography.Text>
         </div>
         <List
+          className="producer-list"
           dataSource={sortedProducers}
           split={false}
           renderItem={(producer) => {

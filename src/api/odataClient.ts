@@ -11,12 +11,24 @@ export interface ODataQueryOptions {
   skip?: number
 }
 
-// ЗАШИТЫЙ URL API
-const baseURL = '/api' //'http://localhost:7091/odata' 
+const baseURL = 'http://localhost:7091/odata' //'/api'
 const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({
-  baseURL, // Теперь запросы идут напрямую на API
+  baseURL,
+  paramsSerializer: (params: Record<string, any>) => {
+    // Сериализуем параметры для OData: пробелы как + вместо %20
+    const parts: string[] = []
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        const strValue = String(value)
+        // Кодируем все специальные символы, но пробелы заменяем на +
+        const encodedValue = encodeURIComponent(strValue).replace(/%20/g, '+')
+        parts.push(`${encodeURIComponent(key)}=${encodedValue}`)
+      }
+    }
+    return parts.join('&')
+  },
 })
 
 client.interceptors.request.use((config) => {

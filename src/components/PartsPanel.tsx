@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Empty, Flex, Input, message, Popconfirm, Space, Spin, Table, Typography } from 'antd'
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Empty, Flex, Input, message, Modal, Space, Spin, Table, Typography } from 'antd'
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { EtPart, EtProducer } from '../api/types.ts'
 import { createPart, deletePart, fetchPartsPage, fetchStringsByIds, updatePart } from '../api/parts.ts'
 import type { PartsPageResult } from '../api/parts.ts'
 import { partFields } from '../config/resources.ts'
 import { EntityFormModal } from './EntityFormModal.tsx'
+import { PartDetailsDrawer } from './PartDetailsDrawer.tsx'
 
 interface PartsPanelProps {
   producer?: EtProducer | null
@@ -19,6 +20,7 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
   const [search, setSearch] = useState('')
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingPart, setEditingPart] = useState<EtPart | null>(null)
+  const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
   const queryClient = useQueryClient()
 
   const {
@@ -204,6 +206,17 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
     },
   })
 
+  const confirmDelete = (part: EtPart) => {
+    Modal.confirm({
+      title: 'Удалить деталь?',
+      content: `Вы уверены, что хотите удалить деталь ${part.Code ?? 'без кода'}?`,
+      okText: 'Удалить',
+      cancelText: 'Отмена',
+      okButtonProps: { danger: true, loading: deleteMutation.isPending },
+      onOk: () => deleteMutation.mutate(part.Id),
+    })
+  }
+
   const handleSubmit = (values: Partial<EtPart>) => {
     if (!producer) {
       return
@@ -236,6 +249,50 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
   const compareStringIds = (first?: number, second?: number) =>
     compareStrings(getStringValue(first) ?? '', getStringValue(second) ?? '')
 
+  // Создаем маппинг actions для каждой детали
+  const partsActionsMap = useMemo(() => {
+    const map = new Map<number, Array<{ key: string; label: ReactNode; onClick: () => void; danger?: boolean }>>()
+    filteredParts.forEach((part) => {
+      map.set(part.Id, [
+        {
+          key: 'view',
+          label: (
+            <Space size={6}>
+              <InfoCircleOutlined />
+              Просмотр
+            </Space>
+          ),
+          onClick: () => setPreviewPart(part),
+        },
+        {
+          key: 'edit',
+          label: (
+            <Space size={6}>
+              <EditOutlined />
+              Редактировать
+            </Space>
+          ),
+          onClick: () => {
+            setEditingPart(part)
+            setModalOpen(true)
+          },
+        },
+        {
+          key: 'delete',
+          label: (
+            <Space size={6}>
+              <DeleteOutlined />
+              Удалить
+            </Space>
+          ),
+          danger: true,
+          onClick: () => confirmDelete(part),
+        },
+      ])
+    })
+    return map
+  }, [filteredParts])
+
   const columns: ColumnsType<EtPart> = [
     {
       title: 'Код',
@@ -246,15 +303,13 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
       },
       sortDirections: ['ascend', 'descend'],
       render: (value: string) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text
-            strong
-            style={{ cursor: value ? 'copy' : 'default' }}
-            onClick={(event) => handleCopy(event, value)}
-          >
-            {value ?? '-'}
-          </Typography.Text>
-        </Space>
+        <Typography.Text
+          strong
+          style={{ cursor: value ? 'copy' : 'default', display: 'block', lineHeight: '1.2' }}
+          onClick={(event) => handleCopy(event, value)}
+        >
+          {value ?? '-'}
+        </Typography.Text>
       ),
     },
     {
@@ -304,33 +359,6 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
       sortDirections: ['ascend', 'descend'],
       render: (value?: number) => (value ? `${value.toFixed(2)}` : '—'),
     },
-    {
-      title: '',
-      dataIndex: 'actions',
-      width: 96,
-      render: (_, record) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            type="text"
-            onClick={(event) => {
-              event.stopPropagation()
-              setEditingPart(record)
-              setModalOpen(true)
-            }}
-          />
-          <Popconfirm
-            title="Удалить деталь?"
-            onConfirm={(event) => {
-              event?.stopPropagation()
-              deleteMutation.mutate(record.Id)
-            }}
-          >
-            <Button icon={<DeleteOutlined />} type="text" danger loading={deleteMutation.isPending} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
   ]
 
   const renderBody = () => {
@@ -353,17 +381,55 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
         columns={columns}
         size="small"
         pagination={false}
-        onRow={(record) => ({
-          onClick: () => onSelectPart(record),
-        })}
-        rowClassName={(record) => {
-          const isActive = record.Id === selectedPart?.Id
-          const isAccepted = record.Accepted
-          if (isActive) {
-            return 'table-row--active'
+        onRow={(record) => {
+          return {
+            onClick: () => onSelectPart(record),
+            className: (() => {
+              const isActive = record.Id === selectedPart?.Id
+              const isAccepted = record.Accepted
+              if (isActive) {
+                return 'table-row--active'
+              }
+              return isAccepted ? '' : 'table-row--inactive'
+            })(),
+            'data-part-id': record.Id,
           }
+        }}
+        components={{
+          body: {
+            row: (props: any) => {
+              const partId = props['data-part-id']
+              if (!partId) {
+                return <tr {...props} />
+              }
 
-          return isAccepted ? '' : 'table-row--inactive'
+              const actions = partsActionsMap.get(partId)
+              if (!actions) {
+                return <tr {...props} />
+              }
+
+              const items = actions.map((action) => ({
+                key: action.key,
+                label: action.label,
+                onClick: (info: any) => {
+                  info.domEvent.stopPropagation()
+                  action.onClick()
+                },
+                danger: action.danger,
+              }))
+
+              // Используем компонент-обертку для контекстного меню
+              const TableRowWithContextMenu = ({ children, ...rowProps }: any) => {
+                return (
+                  <Dropdown trigger={['contextMenu']} menu={{ items }} getPopupContainer={(trigger) => trigger.parentElement || document.body}>
+                    <tr {...rowProps}>{children}</tr>
+                  </Dropdown>
+                )
+              }
+
+              return <TableRowWithContextMenu {...props} />
+            },
+          },
         }}
       />
     ) : (
@@ -434,6 +500,8 @@ export const PartsPanel = ({ producer, onSelectPart, selectedPart }: PartsPanelP
       <div className="panel-body" ref={tableContainerRef}>
         {renderBody()}
       </div>
+
+      <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)} />
 
       <EntityFormModal<EtPart>
         title={editingPart ? 'Редактирование детали' : 'Новая деталь'}
