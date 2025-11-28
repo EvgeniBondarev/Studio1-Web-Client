@@ -11,7 +11,7 @@ export interface ODataQueryOptions {
   skip?: number
 }
 
-const baseURL = 'http://localhost:7091/odata' //'/api'
+const baseURL = '/api' //'http://localhost:7091/odata'
 const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({

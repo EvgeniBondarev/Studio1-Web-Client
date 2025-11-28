@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
-import { Button, Empty, Flex, Input, List, message, Modal, Space, Spin, Typography } from 'antd'
+import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
   createProducer,
@@ -16,13 +16,47 @@ import { ContextActionsMenu } from './ContextActionsMenu.tsx'
 import { ProducerDetailsDrawer } from './ProducerDetailsDrawer.tsx'
 import { fetchPartsCount } from '../api/parts.ts'
 
+type ProducerFilterMode = 'all' | 'originals'
+const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
+
+const loadProducerFilterMode = (): ProducerFilterMode => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const stored = window.sessionStorage.getItem(PRODUCER_FILTER_MODE_SESSION_KEY)
+  return stored === 'originals' ? 'originals' : 'all'
+}
+
 interface ProducerPanelProps {
   selectedProducer?: EtProducer | null
   onSelect: (producer: EtProducer | null) => void
+  externalSearch?: string
+  onSearchChange?: (value: string) => void
+  searchType?: 'by_producer' | 'without_producer'
 }
 
-export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps) => {
+export const ProducerPanel = ({
+  selectedProducer,
+  onSelect,
+  externalSearch,
+  onSearchChange,
+  searchType = 'by_producer',
+}: ProducerPanelProps) => {
   const [search, setSearch] = useState('')
+  const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
+  useEffect(() => {
+    if (externalSearch !== undefined && externalSearch !== search) {
+      setSearch(externalSearch)
+    }
+  }, [externalSearch, search])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.sessionStorage.setItem(PRODUCER_FILTER_MODE_SESSION_KEY, filterMode)
+  }, [filterMode])
+
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
   const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
@@ -37,8 +71,11 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
     isFetchingNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['producers', search],
-    queryFn: ({ pageParam }) => fetchProducersPage(search, pageParam as string | undefined),
+    queryKey: ['producers', search, filterMode],
+    queryFn: ({ pageParam }) =>
+      fetchProducersPage(search, pageParam as string | undefined, {
+        onlyOriginals: filterMode === 'originals',
+      }),
     getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
     initialPageParam: undefined as string | undefined,
   })
@@ -70,6 +107,19 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
     })
     return map
   }, [sortedProducers, partsCountQueries])
+
+  const renderRatingBadge = (rating?: number | null) => {
+    if (rating === undefined || rating === null) {
+      return null
+    }
+    const clamped = Math.max(0, Math.min(10, rating))
+    const level = clamped >= 7 ? 'high' : clamped >= 4 ? 'medium' : 'low'
+    return (
+      <span className={`producer-rating producer-rating--${level}`} title={`Рейтинг: ${clamped}`}>
+        {Number.isInteger(clamped) ? clamped : clamped.toFixed(1)}
+      </span>
+    )
+  }
 
   const closeModal = () => {
     setModalOpen(false)
@@ -202,14 +252,27 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
 
             return (
               <ContextActionsMenu actions={actions}>
-                <List.Item className="producer-row-wrapper" style={{ padding: 0 }} onClick={() => onSelect(producer)}>
+                <List.Item
+                  className="producer-row-wrapper"
+                  style={{ padding: 0 }}
+                  onClick={() => {
+                    if (searchType === 'without_producer') {
+                      message.info('Сейчас включён поиск деталей без привязки к производителю.')
+                      return
+                    }
+                    onSelect(producer)
+                  }}
+                >
                   <div className={rowClassNames.join(' ')}>
                     <Typography.Text
                       className="producer-row__cell producer-row__cell--prefix"
                       strong
                       title={producer.MarketPrefix ?? producer.Prefix ?? '—'}
                     >
-                      {producer.MarketPrefix ?? producer.Prefix ?? '—'}
+                      <span className="producer-prefix">
+                        {renderRatingBadge(producer.Rating)}
+                        <span>{producer.MarketPrefix ?? producer.Prefix ?? '—'}</span>
+                      </span>
                     </Typography.Text>
                     <Typography.Text
                       className="producer-row__cell producer-row__cell--name"
@@ -262,14 +325,14 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
   }
 
   return (
-    <Flex vertical style={{ height: '100%' }} gap="middle" className="panel">
-      <Flex justify="space-between" align="center" className="panel-header">
-        <Typography.Title level={4} style={{ margin: 0 }}>
+    <Flex vertical style={{ height: '100%' }} gap={8} className="panel">
+      <Flex justify="space-between" align="center" className="panel-header" style={{ marginBottom: 0 }}>
+        <Typography.Title level={5} style={{ margin: 0 }}>
           Производители
         </Typography.Title>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => refetch()} type="text" loading={isFetching} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+        <Space size={4}>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} type="text" size="small" loading={isFetching} />
+          <Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => setModalOpen(true)}>
             Добавить
           </Button>
         </Space>
@@ -278,9 +341,28 @@ export const ProducerPanel = ({ selectedProducer, onSelect }: ProducerPanelProps
       <Input.Search
         placeholder="Поиск по названию или префиксу"
         allowClear
+        size="small"
         value={search}
-        onChange={(event) => setSearch(event.target.value)}
+        onChange={(event) => {
+          const { value } = event.target
+          setSearch(value)
+          onSearchChange?.(value)
+        }}
         className="panel-search"
+        addonAfter={
+          <Select
+            value={filterMode}
+            onChange={(value: ProducerFilterMode) => setFilterMode(value)}
+            size="small"
+            style={{ width: 70 }}
+            dropdownMatchSelectWidth={false}
+            dropdownStyle={{ width: 170 }}
+            options={[
+              { value: 'all', label: 'Все производители' },
+              { value: 'originals', label: 'Только оригинальные' },
+            ]}
+          />
+        }
       />
 
       <div className="panel-body">{renderList()}</div>

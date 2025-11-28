@@ -27,6 +27,45 @@ export const fetchPartsPage = async (producerId: number, nextLink?: string): Pro
   }
 }
 
+export const fetchPartsPageWithoutProducer = async (
+  searchTerm?: string,
+  filterMode: 'exact' | 'startsWith' | 'endsWith' | 'contains' = 'exact',
+  nextLink?: string,
+): Promise<PartsPageResult> => {
+  const escapedTerm = searchTerm ? searchTerm.replace(/'/g, "''") : undefined
+
+  let filter: string | undefined
+  if (escapedTerm) {
+    switch (filterMode) {
+      case 'startsWith':
+        filter = `startsWith(Code,'${escapedTerm}')`
+        break
+      case 'endsWith':
+        filter = `endsWith(Code,'${escapedTerm}')`
+        break
+      case 'contains':
+        filter = `contains(Code,'${escapedTerm}')`
+        break
+      default:
+        filter = `Code eq '${escapedTerm}'`
+    }
+  }
+
+  const response = nextLink
+    ? await odataClient.fetchByUrl<ODataListResponse<EtPart>>(nextLink)
+    : await odataClient.list<EtPart>('Parts', {
+        filter,
+        orderBy: 'LongCode',
+        top: PARTS_PAGE_SIZE,
+      } satisfies ODataQueryOptions)
+
+  return {
+    items: response.value,
+    total: response['@odata.count'],
+    nextLink: response['@odata.nextLink'],
+  }
+}
+
 export const fetchPartsCount = async (producerId: number) => {
   const data = await odataClient.list<EtPart>('Parts', {
     filter: buildPartsFilter(producerId),
