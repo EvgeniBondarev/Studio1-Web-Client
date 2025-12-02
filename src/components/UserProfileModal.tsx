@@ -45,7 +45,7 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
       onCancel={onClose}
       footer={null}
       width={800}
-      destroyOnClose
+      destroyOnHidden
     >
       {isFetching ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>

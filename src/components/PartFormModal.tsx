@@ -69,8 +69,8 @@ export const PartFormModal = ({
       confirmLoading={loading}
       onCancel={onCancel}
       width={720}
-      bodyStyle={{ maxHeight: '80vh', overflow: 'auto' }}
-      destroyOnClose
+      styles={{ body: { maxHeight: '80vh', overflow: 'auto' } }}
+      destroyOnHidden
     >
       <Form layout="vertical" form={form}>
         <Form.Item name="SessionId" hidden>

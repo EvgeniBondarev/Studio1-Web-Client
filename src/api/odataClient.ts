@@ -1,5 +1,6 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig } from 'axios'
+import { message } from 'antd'
+import type { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios'
 import type { ODataListResponse } from './types.ts'
 
 export interface ODataQueryOptions {
@@ -11,11 +12,11 @@ export interface ODataQueryOptions {
   skip?: number
 }
 
-const baseURL = '/api' // 'http://localhost:7091/odata'
+const baseURL = 'http://studio-api.interparts.ru/odata' // 'http://localhost:7091/odata'
 const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({
-  baseURL,
+  baseURL, 
   paramsSerializer: (params: Record<string, any>) => {
     // Сериализуем параметры для OData: пробелы как + вместо %20
     const parts: string[] = []
@@ -41,6 +42,56 @@ client.interceptors.request.use((config) => {
   return config
 })
 
+client.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    // Обработка ошибки 403 Forbidden
+    if (error.response?.status === 403) {
+      message.error('Ваш IP-адрес не доступен для использования данного сервиса', 8)
+      return Promise.reject(error)
+    }
+
+    // Обработка CORS ошибок
+    // CORS ошибки обычно приходят без response (error.response === undefined)
+    // и с кодом ERR_NETWORK или Network Error в сообщении
+    if (
+      !error.response &&
+      error.config &&
+      (error.code === 'ERR_NETWORK' ||
+        error.message?.toLowerCase().includes('network error') ||
+        error.message?.toLowerCase().includes('cors') ||
+        (error.request && !error.response))
+    ) {
+      // Проверяем, что запрос идет к внешнему домену (не к текущему origin)
+      // Это указывает на возможную CORS ошибку
+      try {
+        if (error.config.baseURL || error.config.url) {
+          const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+          const requestUrl = new URL(
+            error.config.url || '',
+            error.config.baseURL || currentOrigin || 'http://localhost',
+          )
+          
+          // Если запрос к другому домену и нет response - это скорее всего CORS
+          if (requestUrl.origin !== currentOrigin && currentOrigin) {
+            message.error('Ваш IP-адрес не доступен для использования данного сервиса', 8)
+            return Promise.reject(error)
+          }
+        }
+      } catch (e) {
+        // Если не удалось определить URL, но есть признаки CORS ошибки, показываем сообщение
+        if (error.code === 'ERR_NETWORK' || error.message?.toLowerCase().includes('cors')) {
+          message.error('Ваш IP-адрес не доступен для использования данного сервиса', 8)
+          return Promise.reject(error)
+        }
+      }
+    }
+
+    // Пробрасываем остальные ошибки дальше
+    return Promise.reject(error)
+  },
+)
+
 const buildQueryParams = (options?: ODataQueryOptions) => {
   if (!options) {
     return undefined
@@ -54,7 +105,12 @@ const buildQueryParams = (options?: ODataQueryOptions) => {
   if (options.expand) params['$expand'] = options.expand
   if (options.top !== undefined) params['$top'] = options.top
   if (options.skip !== undefined) params['$skip'] = options.skip
+  
+  // Добавляем $count только если есть хотя бы один параметр запроса
+  const hasAnyParam = options.filter || options.orderBy || options.select || options.expand || options.top !== undefined || options.skip !== undefined
+  if (hasAnyParam) {
   params['$count'] = 'true'
+  }
 
   return params
 }

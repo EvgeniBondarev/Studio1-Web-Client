@@ -41,6 +41,10 @@ interface PartsPanelProps {
   selectedPart?: EtPart | null
   onFocusProducer?: (producer: EtProducer) => void
   onSearchTypeChange?: (type: SearchType) => void
+  autoEditPart?: EtPart | null
+  onAutoEditProcessed?: () => void
+  initialSearch?: string
+  initialSearchType?: SearchType
 }
 
 export const PartsPanel = ({
@@ -49,16 +53,65 @@ export const PartsPanel = ({
   selectedPart,
   onFocusProducer,
   onSearchTypeChange,
+  autoEditPart,
+  onAutoEditProcessed,
+  initialSearch,
+  initialSearchType,
 }: PartsPanelProps) => {
   const savedFilters = loadPartsFilterSettings()
-  const [searchInput, setSearchInput] = useState(() => savedFilters?.searchInput ?? '')
-  const [search, setSearch] = useState(() => savedFilters?.search ?? '')
-  const [searchType, setSearchType] = useState<SearchType>(() => savedFilters?.searchType ?? 'by_producer')
-  const [codeFilterMode, setCodeFilterMode] = useState<CodeFilterMode>(() => savedFilters?.codeFilterMode ?? 'exact')
+  const [searchInput, setSearchInput] = useState(() => initialSearch ?? savedFilters?.searchInput ?? '')
+  const [search, setSearch] = useState(() => initialSearch ?? savedFilters?.search ?? '')
+  const [searchType, setSearchType] = useState<SearchType>(() => initialSearchType ?? savedFilters?.searchType ?? 'by_producer')
+  
+  // Синхронизация с initialSearch и initialSearchType (только при первом рендере или изменении)
+  const initialSearchProcessedRef = useRef(false)
+  const initialSearchTypeProcessedRef = useRef(false)
+  
+  useEffect(() => {
+    if (initialSearch !== undefined && !initialSearchProcessedRef.current) {
+      setSearchInput(initialSearch)
+      setSearch(initialSearch)
+      initialSearchProcessedRef.current = true
+    }
+  }, [initialSearch])
+  
+  useEffect(() => {
+    if (initialSearchType !== undefined && !initialSearchTypeProcessedRef.current) {
+      setSearchType(initialSearchType)
+      onSearchTypeChange?.(initialSearchType)
+      initialSearchTypeProcessedRef.current = true
+    }
+  }, [initialSearchType, onSearchTypeChange])
+  const [codeFilterMode, setCodeFilterMode] = useState<CodeFilterMode>(() => savedFilters?.codeFilterMode ?? 'startsWith')
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingPart, setEditingPart] = useState<EtPart | null>(null)
   const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ partId: number; x: number; y: number } | null>(null)
   const queryClient = useQueryClient()
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Закрываем контекстное меню при клике вне его
+  useEffect(() => {
+    if (!contextMenu) {
+      return
+    }
+    const handleClick = () => {
+      setContextMenu(null)
+    }
+    const handleContextMenu = () => {
+      setContextMenu(null)
+    }
+    // Небольшая задержка, чтобы не закрыть меню сразу после открытия
+    const timeout = setTimeout(() => {
+      document.addEventListener('click', handleClick)
+      document.addEventListener('contextmenu', handleContextMenu)
+    }, 100)
+    return () => {
+      clearTimeout(timeout)
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [contextMenu])
 
   const {
     data,
@@ -133,6 +186,32 @@ export const PartsPanel = ({
     }
     window.sessionStorage.setItem(PARTS_FILTER_SESSION_KEY, JSON.stringify(payload))
   }, [searchInput, search, searchType, codeFilterMode])
+
+  // Автоматическая загрузка при прокрутке
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px',
+        threshold: 0.1,
+      },
+    )
+
+    observer.observe(loadMoreRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   useEffect(() => {
     onSearchTypeChange?.(searchType)
@@ -291,6 +370,14 @@ export const PartsPanel = ({
   })()
   const initialLoading = isLoading && !parts.length
 
+  // Функция для обрезки текста до 65 символов
+  const truncateText = (text: string): string => {
+    if (text.length <= 65) {
+      return text
+    }
+    return text.substring(0, 65) + '...'
+  }
+
   const renderStringValue = (id?: number) => {
     if (!id) {
       return '—'
@@ -299,7 +386,25 @@ export const PartsPanel = ({
     if (stringsMap) {
       const text = stringsMap[id]
       if (text !== undefined) {
-        return text || '—'
+        if (!text) {
+          return '—'
+        }
+
+        const truncated = truncateText(text)
+        return (
+          <Typography.Text
+            title={text}
+            style={{
+              maxWidth: '100%',
+              display: 'block',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {truncated}
+          </Typography.Text>
+        )
       }
     }
 
@@ -336,6 +441,21 @@ export const PartsPanel = ({
     setModalOpen(false)
     setEditingPart(null)
   }
+
+  // Автоматическое открытие редактирования при получении autoEditPart
+  const processedAutoEditPartRef = useRef<EtPart | null | undefined>(undefined)
+  useEffect(() => {
+    // Открываем редактирование только если autoEditPart изменился и стал не null
+    if (autoEditPart && producer && processedAutoEditPartRef.current !== autoEditPart) {
+      setEditingPart(autoEditPart)
+      setModalOpen(true)
+      processedAutoEditPartRef.current = autoEditPart
+      // Уведомляем родительский компонент, что обработка завершена
+      onAutoEditProcessed?.()
+    } else if (!autoEditPart) {
+      processedAutoEditPartRef.current = undefined
+    }
+  }, [autoEditPart, producer, onAutoEditProcessed])
 
   const createMutation = useMutation({
     mutationFn: createPart,
@@ -462,15 +582,30 @@ export const PartsPanel = ({
         multiple: 6,
       },
       sortDirections: ['ascend', 'descend'],
-      render: (value: string) => (
+      render: (value: string) => {
+        if (!value) {
+          return '-'
+        }
+        const truncated = truncateText(value)
+        return (
           <Typography.Text
             strong
-          style={{ cursor: value ? 'copy' : 'default', display: 'block', lineHeight: '1.2' }}
+            title={value}
+            style={{
+              cursor: 'copy',
+              display: 'block',
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: '1.2',
+            }}
             onClick={(event) => handleCopy(event, value)}
           >
-            {value ?? '-'}
+            {truncated}
           </Typography.Text>
-      ),
+        )
+      },
     },
     ...(searchType === 'without_producer'
       ? [
@@ -492,15 +627,24 @@ export const PartsPanel = ({
                 return <Spin size="small" />
               }
               const label = producer.Name ?? producer.Prefix ?? '—'
+              const truncated = truncateText(label)
               return (
                 <Typography.Link
-                  style={{ fontSize: 12 }}
+                  title={label}
+                  style={{
+                    fontSize: 12,
+                    maxWidth: '100%',
+                    display: 'block',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
                   onClick={(event) => {
                     event.stopPropagation()
                     handleProducerFilter(record.ProducerId)
                   }}
                 >
-                  {label}
+                  {truncated}
                 </Typography.Link>
               )
             },
@@ -515,14 +659,28 @@ export const PartsPanel = ({
         multiple: searchType === 'without_producer' ? 4 : 4,
       },
       sortDirections: ['ascend', 'descend'],
-      render: (value?: string) => (
-        <Typography.Text
-          style={{ cursor: value ? 'copy' : 'default' }}
-          onClick={(event) => handleCopy(event, value)}
-        >
-          {value ?? '—'}
-        </Typography.Text>
-      ),
+      render: (value?: string) => {
+        if (!value) {
+          return '—'
+        }
+        const truncated = truncateText(value)
+        return (
+          <Typography.Text
+            title={value}
+            style={{
+              cursor: 'copy',
+              maxWidth: '100%',
+              display: 'block',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            onClick={(event) => handleCopy(event, value)}
+          >
+            {truncated}
+          </Typography.Text>
+        )
+      },
     },
     {
       title: 'Наименование',
@@ -581,54 +739,26 @@ export const PartsPanel = ({
         size="small"
         pagination={false}
         onRow={(record) => {
+          const partId = record.Id
+          const actions = partsActionsMap.get(partId)
+          
           return {
-          onClick: () => onSelectPart(record),
-            className: (() => {
-          const isActive = record.Id === selectedPart?.Id
-          const isAccepted = record.Accepted
-          if (isActive) {
-            return 'table-row--active'
-          }
-          return isAccepted ? '' : 'table-row--inactive'
-            })(),
-            'data-part-id': record.Id,
-          }
-        }}
-        components={{
-          body: {
-            row: (props: any) => {
-              const partId = props['data-part-id']
-              if (!partId) {
-                return <tr {...props} />
+            onClick: () => onSelectPart(record),
+            onContextMenu: (e: MouseEvent<HTMLTableRowElement>) => {
+              if (actions && actions.length > 0) {
+                e.preventDefault()
+                setContextMenu({ partId, x: e.clientX, y: e.clientY })
               }
-
-              const actions = partsActionsMap.get(partId)
-              if (!actions) {
-                return <tr {...props} />
-              }
-
-              const items = actions.map((action) => ({
-                key: action.key,
-                label: action.label,
-                onClick: (info: any) => {
-                  info.domEvent.stopPropagation()
-                  action.onClick()
-                },
-                danger: action.danger,
-              }))
-
-              // Используем компонент-обертку для контекстного меню
-              const TableRowWithContextMenu = ({ children, ...rowProps }: any) => {
-                return (
-                  <Dropdown trigger={['contextMenu']} menu={{ items }} getPopupContainer={(trigger) => trigger.parentElement || document.body}>
-                    <tr {...rowProps}>{children}</tr>
-                  </Dropdown>
-                )
-              }
-
-              return <TableRowWithContextMenu {...props} />
             },
-          },
+            className: (() => {
+              const isActive = record.Id === selectedPart?.Id
+              const isAccepted = record.Accepted
+              if (isActive) {
+                return 'table-row--active'
+              }
+              return isAccepted ? '' : 'table-row--inactive'
+            })(),
+          }
         }}
       />
     ) : (
@@ -639,10 +769,21 @@ export const PartsPanel = ({
       <>
         {tableContent}
         {(hasNextPage || isFetchingNextPage) && (
-          <Flex justify="center" style={{ padding: 12 }}>
-            <Button onClick={() => fetchNextPage()} loading={isFetchingNextPage} disabled={!hasNextPage}>
-              Дальше
-            </Button>
+          <Flex
+            ref={loadMoreRef}
+            vertical
+            align="center"
+            style={{ padding: 12 }}
+            gap={4}
+          >
+            {isFetchingNextPage && (
+              <Spin size="small" />
+            )}
+            {resolvedTotalCount !== undefined && typeof resolvedTotalCount === 'number' && resolvedTotalCount > parts.length && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Еще {((resolvedTotalCount - parts.length).toLocaleString('ru-RU'))} записей
+              </Typography.Text>
+            )}
           </Flex>
         )}
       </>
@@ -692,68 +833,102 @@ export const PartsPanel = ({
       </Flex>
 
       <div style={{ position: 'relative' }}>
-      <Input.Search
-        placeholder="Поиск по коду"
-        allowClear
-          size="small"
-          value={searchInput}
-          onChange={(event) => {
-            const { value } = event.target
-            setSearchInput(value)
-            // Поиск происходит динамически через useEffect для обоих режимов
-            // Для режима "without_producer" с debounce, для "by_producer" сразу
-            if (!value) {
-              setSearch('')
-            }
-          }}
-          onSearch={(value) => {
-            // При нажатии Enter или кнопки поиска сразу применяем фильтр
-            setSearch(value.trim())
-            setSearchInput(value.trim())
-          }}
-          disabled={searchType === 'by_producer' && !producer}
-        className="panel-search"
-          addonAfter={
+        <Space.Compact style={{ width: '100%' }} className="panel-search">
+          {searchType === 'by_producer' && (
             <Select
-              value={searchType}
+              value={codeFilterMode}
               onChange={(value) => {
-                setSearchType(value)
-                setSearch('')
-                setSearchInput('')
+                setCodeFilterMode(value)
+                // Не сбрасываем поиск, пересчет произойдет автоматически через useMemo
               }}
               size="small"
-              style={{ width: 180 }}
+              style={{ width: 170 }}
               options={[
-                { value: 'by_producer', label: 'По производителю' },
-                { value: 'without_producer', label: 'Без учета производителя' },
+                { value: 'exact', label: 'Точное совпадение' },
+                { value: 'startsWith', label: 'Начинается с' },
+                { value: 'endsWith', label: 'Заканчивается на' },
+                { value: 'contains', label: 'Содержит' },
               ]}
             />
-          }
-          addonBefore={
-            searchType === 'by_producer' ? (
-              <Select
-                value={codeFilterMode}
-                onChange={(value) => {
-                  setCodeFilterMode(value)
-                  // Не сбрасываем поиск, пересчет произойдет автоматически через useMemo
-                }}
-                size="small"
-                style={{ width: 170 }}
-                options={[
-                  { value: 'exact', label: 'Точное совпадение' },
-                  { value: 'startsWith', label: 'Начинается с' },
-                  { value: 'endsWith', label: 'Заканчивается на' },
-                  { value: 'contains', label: 'Содержит' },
-                ]}
-              />
-            ) : undefined
-          }
-        />
+          )}
+          <Input.Search
+            placeholder="Поиск по коду"
+            allowClear
+            size="small"
+            value={searchInput}
+            onChange={(event) => {
+              const { value } = event.target
+              setSearchInput(value)
+              // Поиск происходит динамически через useEffect для обоих режимов
+              // Для режима "without_producer" с debounce, для "by_producer" сразу
+              if (!value) {
+                setSearch('')
+              }
+            }}
+            onSearch={(value) => {
+              // При нажатии Enter или кнопки поиска сразу применяем фильтр
+              setSearch(value.trim())
+              setSearchInput(value.trim())
+            }}
+            disabled={searchType === 'by_producer' && !producer}
+            style={{ flex: 1 }}
+          />
+          <Select
+            value={searchType}
+            onChange={(value) => {
+              setSearchType(value)
+              setSearch('')
+              setSearchInput('')
+            }}
+            size="small"
+            style={{ width: 180 }}
+            options={[
+              { value: 'by_producer', label: 'По производителю' },
+              { value: 'without_producer', label: 'Без учета производителя' },
+            ]}
+          />
+        </Space.Compact>
       </div>
 
       <div className="panel-body" ref={tableContainerRef}>
         {renderBody()}
       </div>
+
+      {contextMenu && (
+        <Dropdown
+          open={true}
+          menu={{
+            items: partsActionsMap.get(contextMenu.partId)?.map((action) => ({
+              key: action.key,
+              label: action.label,
+              onClick: (info) => {
+                info.domEvent.stopPropagation()
+                action.onClick()
+                setContextMenu(null)
+              },
+              danger: action.danger,
+            })) || [],
+          }}
+          trigger={['contextMenu']}
+          onOpenChange={(open) => {
+            if (!open) {
+              setContextMenu(null)
+            }
+          }}
+          getPopupContainer={() => document.body}
+        >
+          <div
+            style={{
+              position: 'fixed',
+              left: contextMenu.x,
+              top: contextMenu.y,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+            }}
+          />
+        </Dropdown>
+      )}
 
       <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)} />
 

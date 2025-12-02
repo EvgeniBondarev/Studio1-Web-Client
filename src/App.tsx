@@ -8,6 +8,8 @@ import { PartsPanel } from './components/PartsPanel.tsx'
 import { PartDetailsDrawer } from './components/PartDetailsDrawer.tsx'
 import { LoginPage } from './components/LoginPage.tsx'
 import { UserProfileModal } from './components/UserProfileModal.tsx'
+import { fetchProducerById } from './api/producers.ts'
+import { fetchPartsPage, fetchPartsPageWithoutProducer } from './api/parts.ts'
 
 const { Sider, Content } = Layout
 
@@ -36,12 +38,24 @@ const App = () => {
   const [navCollapsed, setNavCollapsed] = useState(true)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [partsSearchType, setPartsSearchType] = useState<'by_producer' | 'without_producer'>('by_producer')
+  const [producerSiderWidth, setProducerSiderWidth] = useState(() => {
+    if (typeof window === 'undefined') {
+      return 480
+    }
+    const stored = window.localStorage.getItem('producerSiderWidth')
+    const parsed = stored ? Number(stored) : NaN
+    return Number.isFinite(parsed) && parsed >= 220 && parsed <= 640 ? parsed : 480
+  })
   const [producerSearch, setProducerSearch] = useState(() => {
     if (typeof window === 'undefined') {
       return ''
     }
     return window.sessionStorage.getItem(PRODUCER_SEARCH_SESSION_KEY) ?? ''
   })
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false)
+  const [autoEditPart, setAutoEditPart] = useState<EtPart | null>(null)
+  const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
+  const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -78,6 +92,86 @@ const App = () => {
       document.body.classList.remove('ant-dark')
     }
   }, [isDarkMode])
+
+  // Обработка URL параметров для открытия редактирования детали
+  useEffect(() => {
+    if (!currentUser || urlParamsProcessed) {
+      return
+    }
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const producerIdParam = urlParams.get('producerId')
+    const codeParam = urlParams.get('code')
+
+    if (producerIdParam && codeParam) {
+      const producerId = Number.parseInt(producerIdParam, 10)
+      if (Number.isFinite(producerId)) {
+        // Загружаем производителя
+        fetchProducerById(producerId)
+          .then((producer) => {
+            setSelectedProducer(producer)
+            setPartsSearchType('by_producer')
+            setInitialPartsSearchType('by_producer')
+            setInitialPartsSearch(codeParam)
+            // Загружаем деталь по коду с учетом производителя
+            return fetchPartsPage(producerId, undefined, codeParam, 'exact')
+          })
+          .then((partsPage) => {
+            const part = partsPage.items.find((p) => p.Code === codeParam)
+            if (part) {
+              // Найдено с учетом производителя
+              setSelectedPart(part)
+              setAutoEditPart(part)
+              // Удаляем параметры из URL
+              urlParams.delete('producerId')
+              urlParams.delete('code')
+              const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '')
+              window.history.replaceState({}, '', newUrl)
+              setUrlParamsProcessed(true)
+              // Сбрасываем initialSearch и initialSearchType после небольшой задержки
+              setTimeout(() => {
+                setInitialPartsSearch(undefined)
+                setInitialPartsSearchType(undefined)
+              }, 100)
+            } else {
+              // Не найдено с учетом производителя, ищем без учета производителя
+              setPartsSearchType('without_producer')
+              setInitialPartsSearchType('without_producer')
+              return fetchPartsPageWithoutProducer(codeParam, 'exact')
+            }
+          })
+          .then((partsPageWithoutProducer) => {
+            if (partsPageWithoutProducer) {
+              const part = partsPageWithoutProducer.items.find((p) => p.Code === codeParam)
+              if (part) {
+                // Найдено без учета производителя
+                setSelectedPart(part)
+                setAutoEditPart(part)
+              }
+              // Удаляем параметры из URL
+              urlParams.delete('producerId')
+              urlParams.delete('code')
+              const newUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '')
+              window.history.replaceState({}, '', newUrl)
+              setUrlParamsProcessed(true)
+              // Сбрасываем initialSearch и initialSearchType после небольшой задержки
+              setTimeout(() => {
+                setInitialPartsSearch(undefined)
+                setInitialPartsSearchType(undefined)
+              }, 100)
+            }
+          })
+          .catch((error) => {
+            console.error('Ошибка при загрузке данных из URL:', error)
+            setUrlParamsProcessed(true)
+          })
+      } else {
+        setUrlParamsProcessed(true)
+      }
+    } else {
+      setUrlParamsProcessed(true)
+    }
+  }, [currentUser, urlParamsProcessed])
 
   const handleLogin = (user: CtUser) => {
     setCurrentUser(user)
@@ -148,6 +242,30 @@ const App = () => {
     },
   ]
 
+  const handleProducerSiderResizeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+
+    const startX = event.clientX
+    const startWidth = producerSiderWidth
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const nextWidth = Math.min(640, Math.max(220, startWidth + deltaX))
+      setProducerSiderWidth(nextWidth)
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('producerSiderWidth', String(nextWidth))
+      }
+    }
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
   const antdTheme = {
     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: isDarkMode
@@ -169,7 +287,7 @@ const App = () => {
   if (!currentUser) {
     return (
       <ConfigProvider theme={antdTheme}>
-        <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode} />
+        <LoginPage onLogin={handleLogin} />
       </ConfigProvider>
     )
   }
@@ -219,7 +337,11 @@ const App = () => {
           </div>
         </Sider>
         <Layout>
-        <Sider width={360} theme={isDarkMode ? 'dark' : 'light'} className="splitter">
+          <Sider
+            width={producerSiderWidth}
+            theme={isDarkMode ? 'dark' : 'light'}
+            className="splitter"
+          >
             <div style={{ padding: 16, height: '100%', overflow: 'hidden' }}>
             <ProducerPanel
               selectedProducer={selectedProducer}
@@ -232,6 +354,10 @@ const App = () => {
                 searchType={partsSearchType}
             />
           </div>
+            <div
+              className="splitter-resizer"
+              onMouseDown={handleProducerSiderResizeMouseDown}
+            />
         </Sider>
         <Layout>
             <Content style={{ padding: 16, height: '100%', overflow: 'hidden' }}>
@@ -240,10 +366,16 @@ const App = () => {
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
                 onFocusProducer={(producer) => {
-                  setProducerSearch(producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '')
+                  setProducerSearch(
+                    producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '',
+                  )
                   setSelectedProducer(producer)
                 }}
                 onSearchTypeChange={setPartsSearchType}
+                autoEditPart={autoEditPart}
+                onAutoEditProcessed={() => setAutoEditPart(null)}
+                initialSearch={initialPartsSearch}
+                initialSearchType={initialPartsSearchType}
             />
           </Content>
           </Layout>

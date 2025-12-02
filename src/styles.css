@@ -42,11 +42,31 @@ body.ant-dark #root {
 }
 
 .splitter {
+  position: relative;
   border-inline-end: 1px solid #e5e7eb;
 }
 
 body.ant-dark .splitter {
   border-inline-end: 1px solid #303030;
+}
+
+.splitter-resizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.15s ease;
+}
+
+.splitter-resizer:hover {
+  background-color: rgba(15, 23, 42, 0.12);
+}
+
+body.ant-dark .splitter-resizer:hover {
+  background-color: rgba(148, 163, 184, 0.35);
 }
 
 .navigation-sider {
@@ -302,6 +322,15 @@ body.ant-dark .producer-row-wrapper {
 
 .ant-table {
   width: 100%;
+}
+
+/* Убираем прокрутку у таблицы */
+.ant-table-body {
+  overflow: visible !important;
+}
+
+.ant-table-container {
+  overflow: visible !important;
 }
 
 /* Мягкие hover эффекты в тёмной теме */

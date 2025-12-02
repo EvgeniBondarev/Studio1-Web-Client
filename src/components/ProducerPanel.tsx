@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import {
   createProducer,
   deleteProducer,
@@ -14,9 +14,10 @@ import { EntityFormModal } from './EntityFormModal.tsx'
 import { producerFields } from '../config/resources.ts'
 import { ContextActionsMenu } from './ContextActionsMenu.tsx'
 import { ProducerDetailsDrawer } from './ProducerDetailsDrawer.tsx'
+import { fetchProducerById } from '../api/producers.ts'
 import { fetchPartsCount } from '../api/parts.ts'
 
-type ProducerFilterMode = 'all' | 'originals'
+type ProducerFilterMode = 'all' | 'originals' | 'non-originals'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
@@ -60,7 +61,10 @@ export const ProducerPanel = ({
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
   const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
+  const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const queryClient = useQueryClient()
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const {
     data,
@@ -73,9 +77,13 @@ export const ProducerPanel = ({
   } = useInfiniteQuery({
     queryKey: ['producers', search, filterMode],
     queryFn: ({ pageParam }) =>
-      fetchProducersPage(search, pageParam as string | undefined, {
-        onlyOriginals: filterMode === 'originals',
-      }),
+      fetchProducersPage(
+        search && search.trim() ? search.trim() : undefined,
+        pageParam as string | undefined,
+        {
+          filterMode,
+        },
+      ),
     getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
     initialPageParam: undefined as string | undefined,
   })
@@ -87,18 +95,21 @@ export const ProducerPanel = ({
     return data.pages.filter((page): page is ProducersPageResult => Boolean(page))
   }, [data])
 
-  const sortedProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
+  const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
+  
+  // Загружаем количество деталей для каждого производителя
   const partsCountQueries = useQueries({
-    queries: sortedProducers.map((producer) => ({
+    queries: allProducers.map((producer) => ({
       queryKey: ['producerPartsCount', producer.Id],
       queryFn: () => fetchPartsCount(producer.Id),
       enabled: Boolean(producer.Id),
       staleTime: 5 * 60 * 1000,
     })),
   })
+  
   const partsCountMap = useMemo(() => {
     const map = new Map<number, { value?: number; isLoading: boolean }>()
-    sortedProducers.forEach((producer, index) => {
+    allProducers.forEach((producer, index) => {
       const query = partsCountQueries[index]
       map.set(producer.Id, {
         value: query?.data ?? undefined,
@@ -106,7 +117,96 @@ export const ProducerPanel = ({
       })
     })
     return map
-  }, [sortedProducers, partsCountQueries])
+  }, [allProducers, partsCountQueries])
+  
+  const sortedProducers = useMemo(() => {
+    if (!sortField) {
+      return allProducers
+    }
+    
+    const sorted = [...allProducers].sort((a, b) => {
+      let comparison = 0
+      
+      switch (sortField) {
+        case 'prefix': {
+          const prefixA = a.MarketPrefix ?? a.Prefix ?? ''
+          const prefixB = b.MarketPrefix ?? b.Prefix ?? ''
+          comparison = prefixA.localeCompare(prefixB, 'ru', { sensitivity: 'base' })
+          break
+        }
+        case 'name': {
+          const nameA = a.Name ?? ''
+          const nameB = b.Name ?? ''
+          comparison = nameA.localeCompare(nameB, 'ru', { sensitivity: 'base' })
+          break
+        }
+        case 'count': {
+          const countA = partsCountMap.get(a.Id)?.value ?? 0
+          const countB = partsCountMap.get(b.Id)?.value ?? 0
+          comparison = countA - countB
+          break
+        }
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+    
+    return sorted
+  }, [allProducers, sortField, sortOrder, partsCountMap])
+
+  // Автоматическая загрузка при прокрутке
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px',
+        threshold: 0.1,
+      },
+    )
+
+    observer.observe(loadMoreRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  
+  // Получаем общее количество из первой страницы
+  const totalProducers = useMemo(() => {
+    const firstPage = producerPages[0]
+    return firstPage?.total
+  }, [producerPages])
+
+  const handleSort = (field: 'prefix' | 'name' | 'count') => {
+    if (sortField === field) {
+      // Переключаем порядок сортировки
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Устанавливаем новое поле и порядок по умолчанию
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const renderSortIcon = (field: 'prefix' | 'name' | 'count') => {
+    if (sortField !== field) {
+      return null
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUpOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+    ) : (
+      <ArrowDownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+    )
+  }
 
   const renderRatingBadge = (rating?: number | null) => {
     if (rating === undefined || rating === null) {
@@ -187,14 +287,29 @@ export const ProducerPanel = ({
     const listContent = sortedProducers.length ? (
       <>
         <div className="producer-row producer-row--header">
-          <Typography.Text className="producer-row__cell producer-row__cell--prefix" type="secondary">
-            Префикс
+          <Typography.Text 
+            className="producer-row__cell producer-row__cell--prefix" 
+            type="secondary"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => handleSort('prefix')}
+          >
+            Префикс {renderSortIcon('prefix')}
           </Typography.Text>
-          <Typography.Text className="producer-row__cell producer-row__cell--name" type="secondary">
-            Название
+          <Typography.Text 
+            className="producer-row__cell producer-row__cell--name" 
+            type="secondary"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => handleSort('name')}
+          >
+            Название {renderSortIcon('name')}
           </Typography.Text>
-          <Typography.Text className="producer-row__cell producer-row__cell--count" type="secondary">
-            Деталей
+          <Typography.Text 
+            className="producer-row__cell producer-row__cell--count" 
+            type="secondary"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => handleSort('count')}
+          >
+            Деталей {renderSortIcon('count')}
           </Typography.Text>
         </div>
         <List
@@ -246,8 +361,6 @@ export const ProducerPanel = ({
             const rowClassNames = ['producer-row']
             if (isActive) {
               rowClassNames.push('producer-row--active')
-            } else if (isNonOriginal) {
-              rowClassNames.push('producer-row--inactive')
             }
 
             return (
@@ -278,7 +391,12 @@ export const ProducerPanel = ({
                       className="producer-row__cell producer-row__cell--name"
                       title={producer.Name ?? '—'}
                     >
-                      {producer.Name ?? '—'}
+                      <Space size={4}>
+                        {producer.Name ?? '—'}
+                        {isNonOriginal && (
+                          <LinkOutlined style={{ fontSize: 12, color: '#1890ff' }} />
+                        )}
+                      </Space>
                     </Typography.Text>
                     <Typography.Text
                       className="producer-row__cell producer-row__cell--count"
@@ -314,10 +432,21 @@ export const ProducerPanel = ({
       <>
         {listContent}
         {(hasNextPage || isFetchingNextPage) && (
-          <Flex justify="center" style={{ padding: 12 }}>
-            <Button onClick={() => fetchNextPage()} loading={isFetchingNextPage} disabled={!hasNextPage}>
-              Дальше
-            </Button>
+          <Flex 
+            ref={loadMoreRef}
+            vertical 
+            align="center" 
+            style={{ padding: 12 }} 
+            gap={4}
+          >
+            {isFetchingNextPage && (
+              <Spin size="small" />
+            )}
+            {totalProducers !== undefined && totalProducers > sortedProducers.length && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Еще {((totalProducers - sortedProducers.length).toLocaleString('ru-RU'))} записей
+              </Typography.Text>
+            )}
           </Flex>
         )}
       </>
@@ -338,36 +467,50 @@ export const ProducerPanel = ({
         </Space>
       </Flex>
 
+      <Space.Compact style={{ width: '100%' }} className="panel-search">
       <Input.Search
         placeholder="Поиск по названию или префиксу"
         allowClear
-        size="small"
+          size="small"
         value={search}
-        onChange={(event) => {
-          const { value } = event.target
-          setSearch(value)
-          onSearchChange?.(value)
-        }}
-        className="panel-search"
-        addonAfter={
-          <Select
-            value={filterMode}
-            onChange={(value: ProducerFilterMode) => setFilterMode(value)}
-            size="small"
-            style={{ width: 70 }}
-            dropdownMatchSelectWidth={false}
-            dropdownStyle={{ width: 170 }}
-            options={[
-              { value: 'all', label: 'Все производители' },
-              { value: 'originals', label: 'Только оригинальные' },
-            ]}
-          />
-        }
-      />
+          onChange={(event) => {
+            const { value } = event.target
+            setSearch(value)
+            onSearchChange?.(value)
+          }}
+          style={{ flex: 1 }}
+        />
+        <Select
+          value={filterMode}
+          onChange={(value: ProducerFilterMode) => setFilterMode(value)}
+          size="small"
+          style={{ width: 70 }}
+          popupMatchSelectWidth={false}
+          styles={{ popup: { root: { width: 170 } } }}
+          options={[
+            { value: 'all', label: 'Все производители' },
+            { value: 'originals', label: 'Только оригинальные' },
+            { value: 'non-originals', label: 'Не оригинальные' },
+          ]}
+        />
+      </Space.Compact>
 
       <div className="panel-body">{renderList()}</div>
 
-      <ProducerDetailsDrawer producer={previewProducer} onClose={() => setPreviewProducer(null)} />
+      <ProducerDetailsDrawer
+        producer={previewProducer}
+        onClose={() => setPreviewProducer(null)}
+        onSelectProducer={async (producerId) => {
+          try {
+            const producer = await fetchProducerById(producerId)
+            onSelect(producer)
+            setPreviewProducer(null)
+          } catch (error) {
+            console.error('Ошибка при загрузке основного производителя:', error)
+            message.error('Не удалось загрузить основного производителя')
+          }
+        }}
+      />
 
       <EntityFormModal<EtProducer>
         title={editingProducer ? 'Редактирование производителя' : 'Новый производитель'}

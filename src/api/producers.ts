@@ -3,17 +3,20 @@ import type { EtProducer, ODataListResponse } from './types.ts'
 
 const PRODUCERS_PAGE_SIZE = 100
 
-const buildProducerFilter = (search?: string, onlyOriginals?: boolean) => {
+const buildProducerFilter = (search?: string, filterMode?: 'all' | 'originals' | 'non-originals') => {
   const conditions: string[] = []
 
-  if (search) {
+  // Проверяем, что search не пустая строка
+  if (search && search.trim()) {
     conditions.push(
       `(contains(Name,'${escapeODataValue(search)}') or contains(MarketPrefix,'${escapeODataValue(search)}'))`,
     )
   }
 
-  if (onlyOriginals) {
+  if (filterMode === 'originals') {
     conditions.push('(Id eq RealId)')
+  } else if (filterMode === 'non-originals') {
+    conditions.push('(Id ne RealId)')
   }
 
   if (!conditions.length) {
@@ -30,7 +33,7 @@ export interface ProducersPageResult {
 }
 
 interface FetchProducersOptions {
-  onlyOriginals?: boolean
+  filterMode?: 'all' | 'originals' | 'non-originals'
 }
 
 export const fetchProducersPage = async (
@@ -38,14 +41,44 @@ export const fetchProducersPage = async (
   nextLink?: string,
   options?: FetchProducersOptions,
 ): Promise<ProducersPageResult | undefined> => {
-  const response = nextLink
-    ? await odataClient.fetchByUrl<ODataListResponse<EtProducer>>(nextLink)
-    : await odataClient.list<EtProducer>('Producers', {
-        filter: buildProducerFilter(search, options?.onlyOriginals),
-        orderBy: 'Rating desc, Name',
-        top: PRODUCERS_PAGE_SIZE,
-      } satisfies ODataQueryOptions)
+  // Если есть nextLink, используем его (для пагинации)
+  if (nextLink) {
+    const response = await odataClient.fetchByUrl<ODataListResponse<EtProducer>>(nextLink)
+    return {
+      items: response.value,
+      total: response['@odata.count'],
+      nextLink: response['@odata.nextLink'],
+    }
+  }
 
+  // Для первой страницы: если нет поиска и фильтра, делаем запрос без параметров
+  const hasSearch = search && search.trim()
+  const hasFilter = options?.filterMode && options.filterMode !== 'all'
+
+  if (!hasSearch && !hasFilter) {
+    // Запрос без параметров - список производителей с сортировкой по названию
+    const response = await odataClient.list<EtProducer>('Producers', {
+      orderBy: 'Name',
+      top: PRODUCERS_PAGE_SIZE,
+    })
+    return {
+      items: response.value,
+      total: response['@odata.count'],
+      nextLink: response['@odata.nextLink'],
+    }
+  }
+
+  // Если есть поиск или фильтр, применяем фильтрацию с параметрами
+  const filter = buildProducerFilter(search, options?.filterMode)
+  const queryOptions: ODataQueryOptions = {
+    orderBy: 'Name',
+    top: PRODUCERS_PAGE_SIZE,
+  }
+  if (filter) {
+    queryOptions.filter = filter
+  }
+
+  const response = await odataClient.list<EtProducer>('Producers', queryOptions)
   return {
     items: response.value,
     total: response['@odata.count'],

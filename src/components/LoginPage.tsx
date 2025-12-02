@@ -8,10 +8,9 @@ const { Title } = Typography
 
 interface LoginPageProps {
   onLogin: (user: CtUser) => void
-  isDarkMode?: boolean
 }
 
-export const LoginPage = ({ onLogin, isDarkMode = false }: LoginPageProps) => {
+export const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (values: { login: string; password: string }) => {
@@ -39,14 +38,13 @@ export const LoginPage = ({ onLogin, isDarkMode = false }: LoginPageProps) => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: isDarkMode ? '#0f0f0f' : '#f5f7fb',
+        backgroundColor: '#f5f7fb',
       }}
     >
       <Card
         style={{
           width: 400,
-          border: isDarkMode ? '1px solid #303030' : '1px solid #e5e7eb',
-          backgroundColor: isDarkMode ? '#181818' : undefined,
+          border: '1px solid #e5e7eb',
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -59,7 +57,7 @@ export const LoginPage = ({ onLogin, isDarkMode = false }: LoginPageProps) => {
               marginBottom: 16,
             }}
           />
-          <Title level={2} style={{ margin: 0 }}>Вход в систему</Title>
+          <Title level={2} style={{ margin: 0, color: '#0f172a' }}>Вход в систему</Title>
         </div>
         <Form
           name="login"

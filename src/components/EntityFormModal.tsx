@@ -50,7 +50,7 @@ export const EntityFormModal = <T extends object>({
       onOk={handleOk}
       confirmLoading={loading}
       onCancel={onCancel}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
         {fields.map((field) => {

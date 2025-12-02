@@ -43,7 +43,7 @@ export const PartDetailsDrawer = ({ producer, part, onClose }: PartDetailsDrawer
       open={Boolean(part)}
       onClose={onClose}
       size="large"
-      destroyOnClose
+      destroyOnHidden
     >
       {part ? (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
