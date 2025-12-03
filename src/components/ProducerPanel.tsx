@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import {
   createProducer,
   deleteProducer,
@@ -17,7 +17,7 @@ import { ProducerDetailsDrawer } from './ProducerDetailsDrawer.tsx'
 import { fetchProducerById } from '../api/producers.ts'
 import { fetchPartsCount } from '../api/parts.ts'
 
-type ProducerFilterMode = 'all' | 'originals' | 'non-originals'
+type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
@@ -119,6 +119,18 @@ export const ProducerPanel = ({
     return map
   }, [allProducers, partsCountQueries])
   
+  // Подсчет частоты префиксов
+  const prefixFrequencyMap = useMemo(() => {
+    const frequencyMap = new Map<string, number>()
+    allProducers.forEach((producer) => {
+      const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
+      if (prefix && prefix !== '—') {
+        frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
+      }
+    })
+    return frequencyMap
+  }, [allProducers])
+
   const sortedProducers = useMemo(() => {
     if (!sortField) {
       return allProducers
@@ -209,8 +221,12 @@ export const ProducerPanel = ({
   }
 
   const renderRatingBadge = (rating?: number | null) => {
-    if (rating === undefined || rating === null) {
-      return null
+    if (rating === undefined || rating === null || rating < 0) {
+      return (
+        <span className="producer-rating producer-rating--unknown" title="Статус не задан">
+          <QuestionCircleOutlined style={{ fontSize: 11 }} />
+        </span>
+      )
     }
     const clamped = Math.max(0, Math.min(10, rating))
     const level = clamped >= 7 ? 'high' : clamped >= 4 ? 'medium' : 'low'
@@ -384,7 +400,23 @@ export const ProducerPanel = ({
                     >
                       <span className="producer-prefix">
                         {renderRatingBadge(producer.Rating)}
-                        <span>{producer.MarketPrefix ?? producer.Prefix ?? '—'}</span>
+                        <span>
+                          {producer.MarketPrefix ?? producer.Prefix ?? '—'}
+                          {(() => {
+                            const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
+                            if (prefix && prefix !== '—') {
+                              const frequency = prefixFrequencyMap.get(prefix) ?? 0
+                              if (frequency >= 2) {
+                                return (
+                                  <Typography.Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                    ({frequency})
+                                  </Typography.Text>
+                                )
+                              }
+                            }
+                            return null
+                          })()}
+                        </span>
                       </span>
                     </Typography.Text>
                     <Typography.Text
@@ -491,6 +523,7 @@ export const ProducerPanel = ({
             { value: 'all', label: 'Все производители' },
             { value: 'originals', label: 'Только оригинальные' },
             { value: 'non-originals', label: 'Не оригинальные' },
+            { value: 'with-prefix', label: 'С заполненным префиксом' },
           ]}
         />
       </Space.Compact>

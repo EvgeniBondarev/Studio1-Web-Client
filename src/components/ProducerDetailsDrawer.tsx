@@ -24,8 +24,8 @@ export const ProducerDetailsDrawer = ({ producer, onClose, onSelectProducer }: P
         <>
           <Space direction="vertical" size="middle" style={{ width: '100%', marginBottom: 16 }}>
             <Typography.Title level={4} style={{ margin: 0 }}>
-              {producer.Name ?? 'Без названия'}
-            </Typography.Title>
+            {producer.Name ?? 'Без названия'}
+          </Typography.Title>
             {isNonOriginal && (
               <Alert
                 message={

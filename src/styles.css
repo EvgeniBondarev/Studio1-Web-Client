@@ -251,6 +251,11 @@ body.ant-dark .producer-row--inactive {
   color: #a61d24;
 }
 
+.producer-rating--unknown {
+  background-color: #e6f4ff;
+  color: #1890ff;
+}
+
 .producer-row__cell--count {
   text-align: right;
 }

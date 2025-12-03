@@ -287,7 +287,7 @@ const App = () => {
   if (!currentUser) {
     return (
       <ConfigProvider theme={antdTheme}>
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode} />
       </ConfigProvider>
     )
   }

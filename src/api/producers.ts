@@ -3,7 +3,7 @@ import type { EtProducer, ODataListResponse } from './types.ts'
 
 const PRODUCERS_PAGE_SIZE = 100
 
-const buildProducerFilter = (search?: string, filterMode?: 'all' | 'originals' | 'non-originals') => {
+const buildProducerFilter = (search?: string, filterMode?: 'all' | 'originals' | 'non-originals' | 'with-prefix') => {
   const conditions: string[] = []
 
   // Проверяем, что search не пустая строка
@@ -17,6 +17,8 @@ const buildProducerFilter = (search?: string, filterMode?: 'all' | 'originals' |
     conditions.push('(Id eq RealId)')
   } else if (filterMode === 'non-originals') {
     conditions.push('(Id ne RealId)')
+  } else if (filterMode === 'with-prefix') {
+    conditions.push('(MarketPrefix ne null and MarketPrefix ne \'\')')
   }
 
   if (!conditions.length) {
@@ -33,7 +35,7 @@ export interface ProducersPageResult {
 }
 
 interface FetchProducersOptions {
-  filterMode?: 'all' | 'originals' | 'non-originals'
+  filterMode?: 'all' | 'originals' | 'non-originals' | 'with-prefix'
 }
 
 export const fetchProducersPage = async (
@@ -72,7 +74,7 @@ export const fetchProducersPage = async (
   const filter = buildProducerFilter(search, options?.filterMode)
   const queryOptions: ODataQueryOptions = {
     orderBy: 'Name',
-    top: PRODUCERS_PAGE_SIZE,
+        top: PRODUCERS_PAGE_SIZE,
   }
   if (filter) {
     queryOptions.filter = filter

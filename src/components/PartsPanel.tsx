@@ -361,8 +361,8 @@ export const PartsPanel = ({
     if (trimmedSearch) {
       // При поиске показываем отфильтрованные / общее
       return `${filteredParts.length.toLocaleString('ru-RU')} / ${
-        resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
-      }`
+          resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
+        }`
     }
     
     // Без поиска показываем только общее количество
@@ -665,7 +665,7 @@ export const PartsPanel = ({
         }
         const truncated = truncateText(value)
         return (
-          <Typography.Text
+        <Typography.Text
             title={value}
             style={{
               cursor: 'copy',
@@ -675,10 +675,10 @@ export const PartsPanel = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            onClick={(event) => handleCopy(event, value)}
-          >
+          onClick={(event) => handleCopy(event, value)}
+        >
             {truncated}
-          </Typography.Text>
+        </Typography.Text>
         )
       },
     },
@@ -743,7 +743,7 @@ export const PartsPanel = ({
           const actions = partsActionsMap.get(partId)
           
           return {
-            onClick: () => onSelectPart(record),
+          onClick: () => onSelectPart(record),
             onContextMenu: (e: MouseEvent<HTMLTableRowElement>) => {
               if (actions && actions.length > 0) {
                 e.preventDefault()
@@ -751,12 +751,12 @@ export const PartsPanel = ({
               }
             },
             className: (() => {
-              const isActive = record.Id === selectedPart?.Id
-              const isAccepted = record.Accepted
-              if (isActive) {
-                return 'table-row--active'
-              }
-              return isAccepted ? '' : 'table-row--inactive'
+          const isActive = record.Id === selectedPart?.Id
+          const isAccepted = record.Accepted
+          if (isActive) {
+            return 'table-row--active'
+          }
+          return isAccepted ? '' : 'table-row--inactive'
             })(),
           }
         }}
@@ -803,8 +803,8 @@ export const PartsPanel = ({
           </Typography.Title>
           {searchType === 'by_producer' && producer && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Производитель: {producer.Name ?? producer.Prefix}
-            </Typography.Text>
+                Производитель: {producer.Name ?? producer.Prefix}
+              </Typography.Text>
           )}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {searchType === 'without_producer' && search?.trim()
@@ -851,9 +851,9 @@ export const PartsPanel = ({
               ]}
             />
           )}
-          <Input.Search
-            placeholder="Поиск по коду"
-            allowClear
+      <Input.Search
+        placeholder="Поиск по коду"
+        allowClear
             size="small"
             value={searchInput}
             onChange={(event) => {
