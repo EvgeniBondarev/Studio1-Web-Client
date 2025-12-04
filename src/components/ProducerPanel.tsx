@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
+import type React from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
-import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
+import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography, Tree, Radio } from 'antd'
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined, UnorderedListOutlined, ApartmentOutlined } from '@ant-design/icons'
+import type { DataNode } from 'antd/es/tree'
+
+interface ProducerTreeNode extends DataNode {
+  producer?: EtProducer
+}
 import {
   createProducer,
   deleteProducer,
@@ -19,7 +26,9 @@ import { fetchProducerById } from '../api/producers.ts'
 import { fetchPartsCount } from '../api/parts.ts'
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
+type ViewMode = 'list' | 'tree'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
+const PRODUCER_VIEW_MODE_SESSION_KEY = 'producerViewMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
   if (typeof window === 'undefined') {
@@ -48,11 +57,18 @@ export const ProducerPanel = ({
 }: ProducerPanelProps) => {
   const [search, setSearch] = useState('')
   const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') {
+      return 'list'
+    }
+    const stored = window.sessionStorage.getItem(PRODUCER_VIEW_MODE_SESSION_KEY)
+    return stored === 'tree' ? 'tree' : 'list'
+  })
   useEffect(() => {
     if (externalSearch !== undefined && externalSearch !== search) {
       setSearch(externalSearch)
     }
-  }, [externalSearch, search])
+  }, [externalSearch])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -60,6 +76,13 @@ export const ProducerPanel = ({
     }
     window.sessionStorage.setItem(PRODUCER_FILTER_MODE_SESSION_KEY, filterMode)
   }, [filterMode])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.sessionStorage.setItem(PRODUCER_VIEW_MODE_SESSION_KEY, viewMode)
+  }, [viewMode])
 
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
@@ -71,6 +94,7 @@ export const ProducerPanel = ({
   const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
   const queryClient = useQueryClient()
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const panelBodyRef = useRef<HTMLDivElement>(null)
 
   // Очищаем выделение при изменении режима поиска
   useEffect(() => {
@@ -130,7 +154,7 @@ export const ProducerPanel = ({
 
   const missingProducers = useMemo(() => {
     const producers: EtProducer[] = []
-    missingProducersQueries.forEach((query, index) => {
+    missingProducersQueries.forEach((query) => {
       if (query.data) {
         producers.push(query.data)
       }
@@ -232,7 +256,7 @@ export const ProducerPanel = ({
         }
       },
       {
-        root: null,
+        root: panelBodyRef.current,
         rootMargin: '100px',
         threshold: 0.1,
       },
@@ -273,6 +297,49 @@ export const ProducerPanel = ({
     )
   }
 
+  // Построение дерева производителей
+  const treeData = useMemo<ProducerTreeNode[]>(() => {
+    if (viewMode !== 'tree') {
+      return []
+    }
+
+    // Разделяем на оригинальные и неоригинальные
+    const originals = filteredProducers.filter((p) => {
+      const realId = p.RealId ?? p.Id
+      return p.Id === realId
+    })
+    
+    const nonOriginals = filteredProducers.filter((p) => {
+      const realId = p.RealId ?? p.Id
+      return p.Id !== realId
+    })
+
+    // Создаем карту для быстрого поиска
+    const producerMap = new Map<number, EtProducer>()
+    filteredProducers.forEach((p) => producerMap.set(p.Id, p))
+
+    // Строим дерево
+    const buildTreeNodes = (producers: EtProducer[]): ProducerTreeNode[] => {
+      return producers.map((producer) => {
+        // Находим дочерние производители
+        const children = nonOriginals
+          .filter((p) => (p.RealId ?? p.Id) === producer.Id)
+          .map((child) => ({
+            key: `producer-${child.Id}`,
+            producer: child,
+          }))
+
+        return {
+          key: `producer-${producer.Id}`,
+          producer,
+          children: children.length > 0 ? children : undefined,
+        }
+      })
+    }
+
+    return buildTreeNodes(originals)
+  }, [filteredProducers, viewMode, selectedProducer, selectedProducerIds, partsCountMap, prefixFrequencyMap])
+
   const renderRatingBadge = (rating?: number | null) => {
     if (rating === undefined || rating === null || rating < 0) {
       return (
@@ -297,9 +364,11 @@ export const ProducerPanel = ({
 
   const createMutation = useMutation({
     mutationFn: createProducer,
-    onSuccess: () => {
+    onSuccess: async () => {
       message.success('Производитель создан')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
+      // Инвалидируем и немедленно обновляем кэш
+      await queryClient.invalidateQueries({ queryKey: ['producers'] })
+      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
       closeModal()
     },
   })
@@ -307,23 +376,43 @@ export const ProducerPanel = ({
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
       updateProducer(id, payload),
-    onSuccess: () => {
+    onSuccess: async (updatedProducer, variables) => {
       message.success('Изменения сохранены')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
+      // Обновляем выбранного производителя, если он был отредактирован
+      if (selectedProducer?.Id === variables.id && updatedProducer) {
+        onSelect(updatedProducer)
+      }
+      // Инвалидируем и немедленно обновляем кэш
+      await queryClient.invalidateQueries({ queryKey: ['producers'] })
+      await queryClient.invalidateQueries({ queryKey: ['producer', variables.id] })
+      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
       closeModal()
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteProducer(id),
-    onSuccess: (_, id) => {
+    onSuccess: async (_, id) => {
       message.success('Производитель удалён')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
       if (selectedProducer?.Id === id) {
         onSelect(null)
       }
+      // Инвалидируем и немедленно обновляем кэш
+      await queryClient.invalidateQueries({ queryKey: ['producers'] })
+      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
     },
   })
+
+  const confirmDelete = (producer: EtProducer) => {
+    Modal.confirm({
+      title: 'Удалить производителя?',
+      content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
+      okText: 'Удалить',
+      cancelText: 'Отмена',
+      okButtonProps: { danger: true, loading: deleteMutation.isPending },
+      onOk: () => deleteMutation.mutate(producer.Id),
+    })
+  }
 
   const linkMutation = useMutation({
     mutationFn: ({ producerIds, targetProducerId }: { producerIds: number[]; targetProducerId: number }) =>
@@ -340,26 +429,7 @@ export const ProducerPanel = ({
     },
   })
 
-  const confirmDelete = (producer: EtProducer) => {
-    Modal.confirm({
-      title: 'Удалить производителя?',
-      content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
-      okText: 'Удалить',
-      cancelText: 'Отмена',
-      okButtonProps: { danger: true, loading: deleteMutation.isPending },
-      onOk: () => deleteMutation.mutate(producer.Id),
-    })
-  }
-
-  const handleSubmit = (values: Partial<EtProducer>) => {
-    if (editingProducer) {
-      updateMutation.mutate({ id: editingProducer.Id, payload: values })
-    } else {
-      createMutation.mutate(values)
-    }
-  }
-
-  const handleProducerClick = (producer: EtProducer, event: React.MouseEvent) => {
+  const handleProducerClick = (producer: EtProducer, event: MouseEvent<HTMLElement>) => {
     // Если зажат Ctrl, добавляем/убираем из выделения
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault()
@@ -405,6 +475,14 @@ export const ProducerPanel = ({
       producerIds: producerIdsArray,
       targetProducerId: linkTargetProducer.Id,
     })
+  }
+
+  const handleSubmit = (values: Partial<EtProducer>) => {
+    if (editingProducer) {
+      updateMutation.mutate({ id: editingProducer.Id, payload: values })
+    } else {
+      createMutation.mutate(values)
+    }
   }
 
   const renderList = () => {
@@ -598,6 +676,120 @@ export const ProducerPanel = ({
     )
   }
 
+  const renderTree = () => {
+    if (isLoading) {
+      return (
+        <Flex justify="center" align="center" style={{ minHeight: 200 }}>
+          <Spin />
+        </Flex>
+      )
+    }
+
+    if (treeData.length === 0) {
+      return <Empty description="Производители не найдены" />
+    }
+
+    return (
+      <Tree
+        treeData={treeData}
+        defaultExpandAll={false}
+        showLine={false}
+        blockNode
+        onSelect={(_selectedKeys, info) => {
+          const node = info.node as ProducerTreeNode
+          if (node.producer) {
+            if (searchType !== 'without_producer') {
+              onSelect(node.producer)
+            }
+          }
+        }}
+        titleRender={(node): React.ReactNode => {
+          const treeNode = node as ProducerTreeNode
+          if (!treeNode.producer) {
+            return node.title as React.ReactNode
+          }
+          const producer = treeNode.producer
+          const isActive = producer.Id === selectedProducer?.Id
+          const isSelected = selectedProducerIds.has(producer.Id)
+          const isNonOriginal = (producer.RealId ?? producer.Id) !== producer.Id
+          const partsCount = partsCountMap.get(producer.Id)?.value ?? 0
+          const prefix = producer.MarketPrefix ?? producer.Prefix ?? '—'
+          const prefixFrequency = prefixFrequencyMap.get(prefix) ?? 0
+
+          const actions = [
+            {
+              key: 'view',
+              label: (
+                <Space size={6}>
+                  <InfoCircleOutlined />
+                  Просмотр
+                </Space>
+              ),
+              onClick: () => setPreviewProducer(producer),
+            },
+            {
+              key: 'edit',
+              label: (
+                <Space size={6}>
+                  <EditOutlined />
+                  Редактировать
+                </Space>
+              ),
+              onClick: () => {
+                setEditingProducer(producer)
+                setModalOpen(true)
+              },
+            },
+            {
+              key: 'delete',
+              label: (
+                <Space size={6}>
+                  <DeleteOutlined />
+                  Удалить
+                </Space>
+              ),
+              danger: true,
+              onClick: () => confirmDelete(producer),
+            },
+          ]
+
+          return (
+            <ContextActionsMenu actions={actions}>
+              <div
+                className={`producer-tree-node ${isActive ? 'producer-tree-node--active' : ''} ${isSelected ? 'producer-tree-node--selected' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleProducerClick(producer, e as any)
+                }}
+              >
+                <Space size={4} style={{ width: '100%' }}>
+                  <span className="producer-tree-node__prefix">
+                    {renderRatingBadge(producer.Rating)}
+                    <span>
+                      {prefix}
+                      {prefixFrequency >= 2 && (
+                        <Typography.Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                          ({prefixFrequency})
+                        </Typography.Text>
+                      )}
+                    </span>
+                  </span>
+                  <span className="producer-tree-node__name">
+                    {producer.Name ?? '—'}
+                    {isNonOriginal && (
+                      <LinkOutlined style={{ fontSize: 12, color: '#1890ff', marginLeft: 4 }} />
+                    )}
+                  </span>
+                  <span className="producer-tree-node__count">{partsCount}</span>
+                </Space>
+              </div>
+            </ContextActionsMenu>
+          )
+        }}
+      />
+    )
+  }
+
   return (
     <Flex vertical style={{ height: '100%' }} gap={8} className="panel">
       <Flex justify="space-between" align="center" className="panel-header" style={{ marginBottom: 0 }}>
@@ -625,6 +817,18 @@ export const ProducerPanel = ({
           }}
           style={{ flex: 1 }}
         />
+        <Radio.Group
+          value={viewMode}
+          onChange={(e) => setViewMode(e.target.value)}
+          size="small"
+        >
+          <Radio.Button value="list" title="Список">
+            <UnorderedListOutlined />
+          </Radio.Button>
+          <Radio.Button value="tree" title="Дерево">
+            <ApartmentOutlined />
+          </Radio.Button>
+        </Radio.Group>
         <Select
           value={filterMode}
           onChange={(value: ProducerFilterMode) => setFilterMode(value)}
@@ -641,7 +845,7 @@ export const ProducerPanel = ({
         />
       </Space.Compact>
 
-      <div className="panel-body">{renderList()}</div>
+      <div ref={panelBodyRef} className="panel-body">{viewMode === 'tree' ? renderTree() : renderList()}</div>
 
       <ProducerDetailsDrawer
         producer={previewProducer}
@@ -688,10 +892,15 @@ export const ProducerPanel = ({
               size="small"
               bordered
               style={{ marginTop: 8, maxHeight: 200, overflow: 'auto' }}
-              dataSource={Array.from(selectedProducerIds).map((id) => {
-                const producer = filteredProducers.find((p) => p.Id === id)
-                return producer
-              }).filter(Boolean)}
+              dataSource={(() => {
+                if (!filteredProducers || filteredProducers.length === 0) {
+                  return []
+                }
+                const selectedProducers = Array.from(selectedProducerIds)
+                  .map((id) => filteredProducers.find((p) => p.Id === id))
+                  .filter((p): p is EtProducer => p !== undefined)
+                return selectedProducers
+              })()}
               renderItem={(producer) => (
                 <List.Item>
                   <Space>

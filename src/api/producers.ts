@@ -98,10 +98,10 @@ export const deleteProducer = (id: number) => odataClient.remove('Producers', id
 
 export const fetchProducerById = (id: number) => odataClient.getById<EtProducer>('Producers', id)
 
-export const linkProducers = async (producerIds: number[], targetProducerId: number) => {
+export const linkProducers = async (producerIds: number[], targetProducerId: number): Promise<void> => {
   // Обновляем RealId для всех выделенных производителей
   const updatePromises = producerIds.map((producerId) =>
-    odataClient.update<EtProducer>('Producers', producerId, { RealId: targetProducerId })
+    updateProducer(producerId, { RealId: targetProducerId })
   )
   await Promise.all(updatePromises)
 }

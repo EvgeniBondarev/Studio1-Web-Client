@@ -37,7 +37,6 @@ interface PartsPanelProps {
   producer?: EtProducer | null
   onSelectPart: (part: EtPart | null) => void
   selectedPart?: EtPart | null
-  onFocusProducer?: (producer: EtProducer) => void
   onSearchTypeChange?: (type: SearchType) => void
   onProducerIdsChange?: (producerIds: number[]) => void
   autoEditPart?: EtPart | null
@@ -50,7 +49,6 @@ export const PartsPanel = ({
   producer,
   onSelectPart,
   selectedPart,
-  onFocusProducer,
   onSearchTypeChange,
   onProducerIdsChange,
   autoEditPart,
@@ -81,7 +79,8 @@ export const PartsPanel = ({
       onSearchTypeChange?.(initialSearchType)
       initialSearchTypeProcessedRef.current = true
     }
-  }, [initialSearchType, onSearchTypeChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSearchType])
   const [codeFilterMode, setCodeFilterMode] = useState<CodeFilterMode>(() => savedFilters?.codeFilterMode ?? 'startsWith')
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingPart, setEditingPart] = useState<EtPart | null>(null)
@@ -441,30 +440,106 @@ export const PartsPanel = ({
 
   const createMutation = useMutation({
     mutationFn: createPart,
-    onSuccess: () => {
+    onSuccess: async () => {
       message.success('Деталь добавлена')
-      queryClient.invalidateQueries({ queryKey: ['parts'] })
+      // Инвалидируем и немедленно обновляем кэш
+      await queryClient.invalidateQueries({ queryKey: ['parts'] })
+      await queryClient.refetchQueries({ queryKey: ['parts'], type: 'active' })
       closeModal()
     },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      // Отменяем исходящие запросы, чтобы они не перезаписали оптимистичное обновление
+      await queryClient.cancelQueries({ queryKey: ['parts'] })
+      
+      // Сохраняем предыдущее значение для отката
+      const previousData = queryClient.getQueriesData({ queryKey: ['parts'] })
+      
+      // Оптимистично обновляем все запросы деталей
+      queryClient.setQueriesData(
+        { queryKey: ['parts'], exact: false },
+        (oldData: any) => {
+          if (!oldData?.pages) return oldData
+          
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: PartsPageResult) => ({
+              ...page,
+              items: page.items.map((item: EtPart) =>
+                item.Id === variables.id
+                  ? { ...item, ...variables.payload }
+                  : item
+              ),
+            })),
+          }
+        },
+      )
+      
+      // Обновляем выбранную деталь сразу
+      if (selectedPart?.Id === variables.id) {
+        onSelectPart({ ...selectedPart, ...variables.payload })
+      }
+      
+      return { previousData }
+    },
+    onSuccess: async (updatedPart, variables) => {
       message.success('Деталь сохранена')
-      queryClient.invalidateQueries({ queryKey: ['parts'] })
+      
+      // Обновляем данные с сервера для всех запросов
+      queryClient.setQueriesData(
+        { queryKey: ['parts'], exact: false },
+        (oldData: any) => {
+          if (!oldData?.pages) return oldData
+          
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: PartsPageResult) => ({
+              ...page,
+              items: page.items.map((item: EtPart) =>
+                item.Id === variables.id && updatedPart
+                  ? { ...item, ...updatedPart }
+                  : item
+              ),
+            })),
+          }
+        },
+      )
+      
+      // Обновляем выбранную деталь с данными с сервера
+      if (selectedPart?.Id === variables.id && updatedPart) {
+        onSelectPart({ ...selectedPart, ...updatedPart })
+      }
+      
+      // Инвалидируем для синхронизации
+      await queryClient.invalidateQueries({ queryKey: ['parts'] })
+      
       closeModal()
+    },
+    onError: (error, _variables, context) => {
+      // Откатываем изменения при ошибке
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+      console.error('Ошибка при сохранении детали:', error)
+      message.error('Ошибка при сохранении детали')
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deletePart(id),
-    onSuccess: (_, id) => {
+    onSuccess: async (_, id) => {
       message.success('Деталь удалена')
-      queryClient.invalidateQueries({ queryKey: ['parts'] })
       if (selectedPart?.Id === id) {
         onSelectPart(null)
       }
+      // Инвалидируем и немедленно обновляем кэш
+      await queryClient.invalidateQueries({ queryKey: ['parts'] })
+      await queryClient.refetchQueries({ queryKey: ['parts'], type: 'active' })
     },
   })
 
@@ -480,14 +555,22 @@ export const PartsPanel = ({
   }
 
   const handleSubmit = (values: Partial<EtPart>) => {
-    if (!producer) {
-      return
-    }
-
-    const payload = { ...values, ProducerId: producer.Id }
     if (editingPart) {
+      // При редактировании используем ProducerId из editingPart, если producer не задан
+      const payload = producer 
+        ? { ...values, ProducerId: producer.Id }
+        : editingPart.ProducerId 
+          ? { ...values, ProducerId: editingPart.ProducerId }
+          : values
+      
       updateMutation.mutate({ id: editingPart.Id, payload })
     } else {
+      // При создании нужен producer
+      if (!producer) {
+        message.error('Выберите производителя для создания детали')
+        return
+      }
+      const payload = { ...values, ProducerId: producer.Id }
       createMutation.mutate(payload)
     }
   }

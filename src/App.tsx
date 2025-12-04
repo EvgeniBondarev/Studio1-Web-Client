@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Layout, Dropdown, Button, Menu, ConfigProvider, theme } from 'antd'
 import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, SettingOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
@@ -183,6 +183,14 @@ const App = () => {
     setSelectedProducer(null)
     setSelectedPart(null)
   }
+
+  const handlePartsSearchTypeChange = useCallback((type: 'by_producer' | 'without_producer') => {
+    setPartsSearchType(type)
+    if (type === 'by_producer') {
+      setPartsProducerIds([])
+    }
+  }, [])
+
   const profileMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -367,18 +375,7 @@ const App = () => {
               producer={selectedProducer}
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
-                onFocusProducer={(producer) => {
-                  setProducerSearch(
-                    producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '',
-                  )
-                  setSelectedProducer(producer)
-                }}
-                onSearchTypeChange={(type) => {
-                  setPartsSearchType(type)
-                  if (type === 'by_producer') {
-                    setPartsProducerIds([])
-                  }
-                }}
+                onSearchTypeChange={handlePartsSearchTypeChange}
                 onProducerIdsChange={setPartsProducerIds}
                 autoEditPart={autoEditPart}
                 onAutoEditProcessed={() => setAutoEditPart(null)}
