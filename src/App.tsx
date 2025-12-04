@@ -56,6 +56,7 @@ const App = () => {
   const [autoEditPart, setAutoEditPart] = useState<EtPart | null>(null)
   const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
   const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
+  const [partsProducerIds, setPartsProducerIds] = useState<number[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -352,6 +353,7 @@ const App = () => {
                 externalSearch={producerSearch}
                 onSearchChange={setProducerSearch}
                 searchType={partsSearchType}
+                filterProducerIds={partsSearchType === 'without_producer' ? partsProducerIds : undefined}
             />
           </div>
             <div
@@ -371,7 +373,13 @@ const App = () => {
                   )
                   setSelectedProducer(producer)
                 }}
-                onSearchTypeChange={setPartsSearchType}
+                onSearchTypeChange={(type) => {
+                  setPartsSearchType(type)
+                  if (type === 'by_producer') {
+                    setPartsProducerIds([])
+                  }
+                }}
+                onProducerIdsChange={setPartsProducerIds}
                 autoEditPart={autoEditPart}
                 onAutoEditProcessed={() => setAutoEditPart(null)}
                 initialSearch={initialPartsSearch}

@@ -198,6 +198,14 @@ body.ant-dark .producer-row--inactive {
   background-color: #181818;
 }
 
+.producer-row--selected {
+  background-color: #e6f7ff !important;
+}
+
+body.ant-dark .producer-row--selected {
+  background-color: #1a3a52 !important;
+}
+
 .producer-row__cell {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -387,5 +395,71 @@ body.ant-dark .ant-input-password:focus,
 body.ant-dark .ant-select-focused .ant-select-selector {
   border-color: #3f3f3f;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Компактные отступы в формах */
+.ant-form .ant-row {
+  margin-left: -2px !important;
+  margin-right: -2px !important;
+}
+
+.ant-form .ant-row > .ant-col {
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+
+/* Уменьшаем вертикальные отступы между полями в формах */
+.ant-form .ant-form-item {
+  margin-bottom: 8px !important;
+}
+
+.ant-form .ant-form-item-label {
+  padding-bottom: 2px !important;
+}
+
+.ant-form .ant-form-item-label > label {
+  height: auto !important;
+  line-height: 1.2 !important;
+  font-size: 13px !important;
+}
+
+/* Компактные поля ввода */
+.ant-form .ant-input,
+.ant-form .ant-input-number,
+.ant-form .ant-input-number-input {
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+}
+
+.ant-form .ant-input-number {
+  height: 28px !important;
+}
+
+.ant-form .ant-input {
+  height: 28px !important;
+}
+
+.ant-form .ant-input-number-input-wrap {
+  height: 28px !important;
+}
+
+/* Компактные textarea */
+.ant-form .ant-input {
+  min-height: 28px !important;
+}
+
+.ant-form textarea.ant-input {
+  min-height: 60px !important;
+  padding: 4px 8px !important;
+}
+
+/* Компактные чекбоксы */
+.ant-form .ant-checkbox-wrapper {
+  margin-bottom: 0 !important;
+  padding: 2px 0 !important;
+}
+
+.ant-form .ant-checkbox-wrapper + .ant-checkbox-wrapper {
+  margin-top: 0 !important;
 }
 

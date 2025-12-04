@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Dropdown, Empty, Flex, Input, message, Modal, Select, Space, Spin, Table, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import type { SortOrder } from 'antd/es/table/interface'
 import type { EtPart, EtProducer } from '../api/types.ts'
 import { createPart, deletePart, fetchPartsPage, fetchPartsPageWithoutProducer, fetchStringsByIds, updatePart } from '../api/parts.ts'
 import type { PartsPageResult } from '../api/parts.ts'
-import { fetchProducerById } from '../api/producers.ts'
 import { PartDetailsDrawer } from './PartDetailsDrawer.tsx'
 import { PartFormModal } from './PartFormModal.tsx'
 
@@ -41,6 +39,7 @@ interface PartsPanelProps {
   selectedPart?: EtPart | null
   onFocusProducer?: (producer: EtProducer) => void
   onSearchTypeChange?: (type: SearchType) => void
+  onProducerIdsChange?: (producerIds: number[]) => void
   autoEditPart?: EtPart | null
   onAutoEditProcessed?: () => void
   initialSearch?: string
@@ -53,6 +52,7 @@ export const PartsPanel = ({
   selectedPart,
   onFocusProducer,
   onSearchTypeChange,
+  onProducerIdsChange,
   autoEditPart,
   onAutoEditProcessed,
   initialSearch,
@@ -155,6 +155,23 @@ export const PartsPanel = ({
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const hasProducer = Boolean(producer?.Id)
 
+  // Извлекаем ProducerId из найденных деталей при поиске без производителя
+  const producerIdsFromParts = useMemo(() => {
+    if (searchType === 'without_producer' && parts.length > 0) {
+      return Array.from(
+        new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number'))
+      )
+    }
+    return []
+  }, [parts, searchType])
+
+  // Передаем ProducerId в родительский компонент
+  useEffect(() => {
+    if (onProducerIdsChange) {
+      onProducerIdsChange(producerIdsFromParts)
+    }
+  }, [producerIdsFromParts, onProducerIdsChange])
+
   useEffect(() => {
     tableContainerRef.current?.scrollTo({ top: 0 })
   }, [producer?.Id])
@@ -224,31 +241,6 @@ export const PartsPanel = ({
   const normalizedSearchTerm = normalizeValue(trimmedSearch)
   
   // Загружаем производителей для деталей, когда поиск без производителя
-  const producerIds = useMemo(() => {
-    if (searchType === 'without_producer') {
-      return Array.from(new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number')))
-    }
-    return []
-  }, [parts, searchType])
-
-  const producersQueries = useQueries({
-    queries: producerIds.map((producerId) => ({
-      queryKey: ['producer', producerId],
-      queryFn: () => fetchProducerById(producerId),
-      enabled: searchType === 'without_producer',
-      staleTime: 5 * 60 * 1000,
-    })),
-  })
-
-  const producersMap = useMemo(() => {
-    const map = new Map<number, EtProducer>()
-    producersQueries.forEach((query, index) => {
-      if (query.data) {
-        map.set(producerIds[index], query.data)
-      }
-    })
-    return map
-  }, [producersQueries, producerIds])
 
   // Загружаем строки для деталей
   const stringsIdsForQuery = useMemo(
@@ -327,16 +319,6 @@ export const PartsPanel = ({
     })
   }, [parts, rawSearchTerm, normalizedSearchTerm, stringsMap, searchType])
 
-  const handleProducerFilter = (producerId: number) => {
-    if (!onFocusProducer) {
-      return
-    }
-
-    const producerFromMap = producersMap.get(producerId)
-    if (producerFromMap) {
-      onFocusProducer(producerFromMap)
-    }
-  }
 
   const resolvedTotalCount = totalParts ?? (hasProducer ? parts.length : undefined)
   
@@ -582,18 +564,22 @@ export const PartsPanel = ({
         multiple: 6,
       },
       sortDirections: ['ascend', 'descend'],
-      render: (value: string) => {
+      render: (value: string, record: EtPart) => {
         if (!value) {
           return '-'
         }
         const truncated = truncateText(value)
+        const showCross = record.Old || record.Dead
+        
         return (
           <Typography.Text
             strong
             title={value}
             style={{
               cursor: 'copy',
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               maxWidth: '100%',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -602,55 +588,26 @@ export const PartsPanel = ({
             }}
             onClick={(event) => handleCopy(event, value)}
           >
-            {truncated}
+            {showCross && (
+              <span 
+                style={{ 
+                  color: '#ff4d4f', 
+                  fontSize: 'inherit', 
+                  fontWeight: 700,
+                  lineHeight: 'inherit',
+                  flexShrink: 0,
+                  display: 'inline-block',
+                  marginRight: '2px',
+                }} 
+              >
+                ×
+              </span>
+            )}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{truncated}</span>
           </Typography.Text>
         )
       },
     },
-    ...(searchType === 'without_producer'
-      ? [
-          {
-            title: 'Производитель',
-            dataIndex: 'ProducerId',
-            sorter: {
-              compare: (a: EtPart, b: EtPart) => {
-                const producerA = producersMap.get(a.ProducerId)
-                const producerB = producersMap.get(b.ProducerId)
-                return compareStrings(producerA?.Name ?? producerA?.Prefix ?? '', producerB?.Name ?? producerB?.Prefix ?? '')
-              },
-              multiple: 5,
-            },
-            sortDirections: ['ascend', 'descend'] as SortOrder[],
-            render: (_: unknown, record: EtPart) => {
-              const producer = producersMap.get(record.ProducerId)
-              if (!producer) {
-                return <Spin size="small" />
-              }
-              const label = producer.Name ?? producer.Prefix ?? '—'
-              const truncated = truncateText(label)
-              return (
-                <Typography.Link
-                  title={label}
-                  style={{
-                    fontSize: 12,
-                    maxWidth: '100%',
-                    display: 'block',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleProducerFilter(record.ProducerId)
-                  }}
-                >
-                  {truncated}
-                </Typography.Link>
-              )
-            },
-    },
-        ]
-      : []),
     {
       title: 'Лп. код',
       dataIndex: 'LongCode',
@@ -858,17 +815,23 @@ export const PartsPanel = ({
             value={searchInput}
             onChange={(event) => {
               const { value } = event.target
-              setSearchInput(value)
+              // Удаляем все небуквенные и нечисловые символы
+              const normalizedValue = normalizeValue(value) || ''
+              setSearchInput(normalizedValue)
               // Поиск происходит динамически через useEffect для обоих режимов
               // Для режима "without_producer" с debounce, для "by_producer" сразу
-              if (!value) {
+              if (!normalizedValue) {
                 setSearch('')
+              } else {
+                setSearch(normalizedValue)
               }
             }}
             onSearch={(value) => {
               // При нажатии Enter или кнопки поиска сразу применяем фильтр
-              setSearch(value.trim())
-              setSearchInput(value.trim())
+              // Удаляем все небуквенные и нечисловые символы
+              const normalizedValue = normalizeValue(value) || ''
+              setSearch(normalizedValue)
+              setSearchInput(normalizedValue)
             }}
             disabled={searchType === 'by_producer' && !producer}
             style={{ flex: 1 }}

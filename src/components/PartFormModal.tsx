@@ -68,15 +68,15 @@ export const PartFormModal = ({
       onOk={handleOk}
       confirmLoading={loading}
       onCancel={onCancel}
-      width={720}
-      styles={{ body: { maxHeight: '80vh', overflow: 'auto' } }}
+      width={680}
+      styles={{ body: { maxHeight: '80vh', overflow: 'auto', padding: '16px 0' } }}
       destroyOnHidden
     >
       <Form layout="vertical" form={form}>
         <Form.Item name="SessionId" hidden>
           <Input />
         </Form.Item>
-        <Row gutter={16}>
+        <Row gutter={4}>
           <Col span={14}>
             <Form.Item
               name="Code"
@@ -111,7 +111,7 @@ export const PartFormModal = ({
           </Col>
         </Row>
 
-        <Row gutter={16}>
+        <Row gutter={4}>
           <Col span={12}>
             <Form.Item name="Weight" label="Вес, кг">
               <InputNumber style={{ width: '100%' }} min={0} step={0.001} />
