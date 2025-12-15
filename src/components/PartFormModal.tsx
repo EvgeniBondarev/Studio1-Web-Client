@@ -1,13 +1,16 @@
-import { useEffect } from 'react'
+import {useEffect, useState} from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Checkbox, Col, Descriptions, Form, Input, InputNumber, Modal, Row } from 'antd'
+import {Checkbox, Col, Descriptions, Flex, Form, Input, InputNumber, Modal, Row, Spin, Tabs} from 'antd'
 import dayjs from 'dayjs'
 import type { EtPart } from '../api/types.ts'
 import { fetchSessionById } from '../api/sessions.ts'
 import {fetchStringById} from '../api/parts.ts';
+import {fetchImagesByBrandArticle} from '../api/interPartsClient.ts';
+import type {ImageResponseItem} from '../api/clientTypes.ts';
 
 interface PartFormModalProps {
   open: boolean
+  producerName?: string
   initialValues?: Partial<EtPart>
   mode: 'create' | 'edit'
   loading?: boolean
@@ -30,8 +33,34 @@ export const PartFormModal = ({
   loading,
   onCancel,
   onSubmit,
+                                producerName
 }: PartFormModalProps) => {
   const [form] = Form.useForm<Partial<EtPart>>()
+  const [activeTab, setActiveTab] = useState('info')
+  const [images, setImages] = useState<ImageResponseItem[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
+
+  useEffect(() => {
+    if (activeTab !== 'images') return
+
+    const article = initialValues?.Code?.toLowerCase()
+
+    if (!producerName || !article) return
+
+    const fetchImages = async () => {
+      setLoadingImages(true)
+      try {
+        const result = await fetchImagesByBrandArticle([
+          { brand: producerName, article }
+        ])
+        setImages(result)
+      } finally {
+        setLoadingImages(false)
+      }
+    }
+
+    fetchImages()
+  }, [activeTab, producerName, initialValues?.Code])
 
   const { data: selectedSession } = useQuery({
     queryKey: ['ctSession', initialValues?.SessionId],
@@ -47,6 +76,7 @@ export const PartFormModal = ({
 
   useEffect(() => {
     if (!open) {
+      setActiveTab('details')
       return
     }
 
@@ -126,26 +156,44 @@ export const PartFormModal = ({
             </Form.Item>
           </Col>
         </Row>
+        <div style={{ minHeight: 300, maxHeight: 300,  overflowY: 'auto',
+          overflowX: 'hidden' }}>
+          <Tabs defaultActiveKey={activeTab} onChange={setActiveTab}>
+            <Tabs.TabPane tab="Деталь" key="details">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="Weight" label="Вес, кг">
+                    <InputNumber style={{width: '100%'}} min={0} step={0.001}/>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="V" label="Объём">
+                    <InputNumber style={{width: '100%'}} min={0} step={0.001}/>
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label="Сессия импорта">
+                <Descriptions column={1} size="small" bordered>
+                  <Descriptions.Item label="Файл импорта">{fileImportValue}</Descriptions.Item>
+                  <Descriptions.Item label="Дата импорта">{importDateValue}</Descriptions.Item>
+                </Descriptions>
+              </Form.Item>
+            </Tabs.TabPane>
+            <Tabs.TabPane tab="Изображение" key="images">
+              Изображение
+              {loadingImages && (
+                  <Flex justify="center" align="center" style={{ minHeight: 200 }}>
+                    <Spin />
+                  </Flex>
+              )}
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="Weight" label="Вес, кг">
-              <InputNumber style={{ width: '100%' }} min={0} step={0.001} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="V" label="Объём">
-              <InputNumber style={{ width: '100%' }} min={0} step={0.001} />
-            </Form.Item>
-          </Col>
-        </Row>
+              {!loadingImages && images[0] && (
+                  <img alt="detail image" src={images[0].url} />
+              )}
+            </Tabs.TabPane>
+          </Tabs>
+        </div>
 
-        <Form.Item label="Сессия импорта">
-          <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="Файл импорта">{fileImportValue}</Descriptions.Item>
-            <Descriptions.Item label="Дата импорта">{importDateValue}</Descriptions.Item>
-          </Descriptions>
-        </Form.Item>
       </Form>
     </Modal>
   )

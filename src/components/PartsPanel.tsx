@@ -939,6 +939,7 @@ export const PartsPanel = ({
         loading={createMutation.isPending || updateMutation.isPending}
         onCancel={closeModal}
         onSubmit={handleSubmit}
+        producerName={producer?.Name}
       />
     </Flex>
   )
