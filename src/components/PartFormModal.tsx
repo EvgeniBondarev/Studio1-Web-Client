@@ -4,6 +4,7 @@ import { Checkbox, Col, Descriptions, Form, Input, InputNumber, Modal, Row } fro
 import dayjs from 'dayjs'
 import type { EtPart } from '../api/types.ts'
 import { fetchSessionById } from '../api/sessions.ts'
+import {fetchStringById} from '../api/parts.ts';
 
 interface PartFormModalProps {
   open: boolean
@@ -32,22 +33,34 @@ export const PartFormModal = ({
 }: PartFormModalProps) => {
   const [form] = Form.useForm<Partial<EtPart>>()
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    if (initialValues) {
-      form.setFieldsValue(initialValues as any)
-    } else {
-      form.resetFields()
-    }
-  }, [open, initialValues, form])
-
   const { data: selectedSession } = useQuery({
     queryKey: ['ctSession', initialValues?.SessionId],
     queryFn: () => (initialValues?.SessionId ? fetchSessionById(initialValues.SessionId) : Promise.resolve(undefined)),
     enabled: Boolean(initialValues?.SessionId),
   })
+
+  const { data: descriptionText } = useQuery({
+    queryKey: ['stringDescription', initialValues?.Description],
+    queryFn: () => fetchStringById(1121, initialValues?.Description ?? 0),
+    enabled: Boolean(initialValues?.Description),
+  })
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    if (initialValues) {
+      const formValues: Partial<EtPart> = ({
+        ...initialValues,
+        Description: descriptionText || "",
+      } as any)
+
+      form.setFieldsValue(formValues)
+    } else {
+      form.resetFields()
+    }
+  }, [open, initialValues, descriptionText, form])
 
   const handleOk = async () => {
     try {
@@ -89,7 +102,10 @@ export const PartFormModal = ({
               <Input />
             </Form.Item>
             <Form.Item name="Description" label="Описание">
-              <Input.TextArea rows={4} />
+              <Input.TextArea
+                  rows={4}
+                  placeholder="Описание не заполнено"
+              />
             </Form.Item>
           </Col>
           <Col span={10}>
