@@ -113,3 +113,62 @@ export interface ODataListResponse<T> {
   value: T[]
 }
 
+export interface PRResponse {
+  Id: number;
+  Article: string;
+  Brand: string;
+  Vendor_Code: string;
+  VehicleAccords: [];
+  VendorCategories: ProductVendorCategory[];
+  Attributes: ProductAttribute[];
+  OemAccords: ProductOemAccord[];
+  Images: ProductImage[];
+}
+
+export interface ProductVendorCategory {
+  Id: number;
+  Product_ID: number;
+  Vendor_Category_ID: number;
+  VendorCategory: VendorCategory;
+}
+
+export interface VendorCategory {
+  Id: number;
+  Name: string;
+  Vendor_Code: string;
+  Parent_ID: number | null;
+}
+
+export interface ProductAttribute {
+  Id: number;
+  Product_ID: number;
+  Attribute_ID: number;
+  Value: string;
+  Attribute: Attribute;
+}
+
+export interface Attribute {
+  Id: number;
+  Name: string;
+}
+
+export interface ProductOemAccord {
+  Id: number;
+  Product_ID: number;
+  OEM_ID: number;
+  Oem: Oem;
+}
+
+export interface Oem {
+  Id: number;
+  Code: string;
+  Mark: string;
+}
+
+export interface ProductImage {
+  Id: number;
+  Product_ID: number;
+  Link: string;
+}
+
+

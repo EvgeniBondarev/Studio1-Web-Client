@@ -9,7 +9,7 @@ import { createPart, deletePart, fetchPartsPage, fetchPartsPageWithoutProducer, 
 import type { PartsPageResult } from '../api/parts.ts'
 import { fetchProducerById } from '../api/producers.ts'
 import { PartDetailsDrawer } from './PartDetailsDrawer.tsx'
-import { PartFormModal } from './PartFormModal.tsx'
+import { PartFormModal } from './partFormModal/PartFormModal.tsx'
 
 type SearchType = 'by_producer' | 'without_producer'
 type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -939,7 +939,7 @@ export const PartsPanel = ({
         loading={createMutation.isPending || updateMutation.isPending}
         onCancel={closeModal}
         onSubmit={handleSubmit}
-        producerName={producer?.Name}
+        brand={producer?.Name}
       />
     </Flex>
   )
