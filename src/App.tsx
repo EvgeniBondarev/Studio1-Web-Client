@@ -4,7 +4,7 @@ import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, Set
 import type { MenuProps } from 'antd'
 import type { EtPart, EtProducer, CtUser } from './api/types.ts'
 import { ProducerPanel } from './components/ProducerPanel.tsx'
-import { PartsPanel } from './components/PartsPanel.tsx'
+import { PartsPanel } from './components/partsPanel/PartsPanel.tsx'
 import { PartDetailsDrawer } from './components/PartDetailsDrawer.tsx'
 import { LoginPage } from './components/LoginPage.tsx'
 import { UserProfileModal } from './components/UserProfileModal.tsx'

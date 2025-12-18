@@ -10,7 +10,9 @@ type Props = {
 export const DataTab = ({attributes = [], categories = []}: Props) => {
     return (
         (!attributes?.length && !categories?.length) ? (
-            <Empty description="Данные отсутствуют"/>
+                <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                    <Empty description="Данные отсутствуют"/>
+                </div>
         ) : (
             <>
                 {categories?.length > 0 && (

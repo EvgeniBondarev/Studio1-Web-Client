@@ -18,7 +18,7 @@ export const ImagesTab = ({ isLoading, images = [] }: Props) => {
 
     if (!images || images.length === 0) {
         return (
-            <div style={{ textAlign: 'center', padding: '50px 0', color: '#999' }}>
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
                 <Empty description="Картинки отсутствуют" />
             </div>
         );
