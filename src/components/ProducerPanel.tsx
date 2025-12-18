@@ -1,20 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MouseEvent } from 'react'
-import type React from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
-import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography, Tree, Radio } from 'antd'
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined, UnorderedListOutlined, ApartmentOutlined } from '@ant-design/icons'
-import type { DataNode } from 'antd/es/tree'
-
-interface ProducerTreeNode extends DataNode {
-  producer?: EtProducer
-}
+import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import {
   createProducer,
   deleteProducer,
   fetchProducersPage,
   updateProducer,
-  linkProducers,
 } from '../api/producers.ts'
 import type { ProducersPageResult } from '../api/producers.ts'
 import type { EtProducer } from '../api/types.ts'
@@ -26,9 +18,7 @@ import { fetchProducerById } from '../api/producers.ts'
 import { fetchPartsCount } from '../api/parts.ts'
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
-type ViewMode = 'list' | 'tree'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
-const PRODUCER_VIEW_MODE_SESSION_KEY = 'producerViewMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
   if (typeof window === 'undefined') {
@@ -44,7 +34,6 @@ interface ProducerPanelProps {
   externalSearch?: string
   onSearchChange?: (value: string) => void
   searchType?: 'by_producer' | 'without_producer'
-  filterProducerIds?: number[]
 }
 
 export const ProducerPanel = ({
@@ -53,22 +42,14 @@ export const ProducerPanel = ({
   externalSearch,
   onSearchChange,
   searchType = 'by_producer',
-  filterProducerIds,
 }: ProducerPanelProps) => {
   const [search, setSearch] = useState('')
   const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === 'undefined') {
-      return 'list'
-    }
-    const stored = window.sessionStorage.getItem(PRODUCER_VIEW_MODE_SESSION_KEY)
-    return stored === 'tree' ? 'tree' : 'list'
-  })
   useEffect(() => {
     if (externalSearch !== undefined && externalSearch !== search) {
       setSearch(externalSearch)
     }
-  }, [externalSearch])
+  }, [externalSearch, search])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -77,31 +58,13 @@ export const ProducerPanel = ({
     window.sessionStorage.setItem(PRODUCER_FILTER_MODE_SESSION_KEY, filterMode)
   }, [filterMode])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.sessionStorage.setItem(PRODUCER_VIEW_MODE_SESSION_KEY, viewMode)
-  }, [viewMode])
-
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
   const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
   const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
-  const [linkModalOpen, setLinkModalOpen] = useState(false)
-  const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
   const queryClient = useQueryClient()
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const panelBodyRef = useRef<HTMLDivElement>(null)
-
-  // Очищаем выделение при изменении режима поиска
-  useEffect(() => {
-    if (searchType === 'without_producer') {
-      setSelectedProducerIds(new Set())
-    }
-  }, [searchType])
 
   const {
     data,
@@ -134,49 +97,9 @@ export const ProducerPanel = ({
 
   const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
   
-  // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
-  const missingProducerIds = useMemo(() => {
-    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-      const existingIds = new Set(allProducers.map((p) => p.Id))
-      return filterProducerIds.filter((id) => !existingIds.has(id))
-    }
-    return []
-  }, [searchType, filterProducerIds, allProducers])
-
-  const missingProducersQueries = useQueries({
-    queries: missingProducerIds.map((producerId) => ({
-      queryKey: ['producer', producerId],
-      queryFn: () => fetchProducerById(producerId),
-      enabled: searchType === 'without_producer' && missingProducerIds.length > 0,
-      staleTime: 5 * 60 * 1000,
-    })),
-  })
-
-  const missingProducers = useMemo(() => {
-    const producers: EtProducer[] = []
-    missingProducersQueries.forEach((query) => {
-      if (query.data) {
-        producers.push(query.data)
-      }
-    })
-    return producers
-  }, [missingProducersQueries])
-
-  // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
-  const filteredProducers = useMemo(() => {
-    const combined = [...allProducers, ...missingProducers]
-    
-    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-      const filterSet = new Set(filterProducerIds)
-      return combined.filter((producer) => filterSet.has(producer.Id))
-    }
-    
-    return combined
-  }, [allProducers, missingProducers, searchType, filterProducerIds])
-  
   // Загружаем количество деталей для каждого производителя
   const partsCountQueries = useQueries({
-    queries: filteredProducers.map((producer) => ({
+    queries: allProducers.map((producer) => ({
       queryKey: ['producerPartsCount', producer.Id],
       queryFn: () => fetchPartsCount(producer.Id),
       enabled: Boolean(producer.Id),
@@ -186,7 +109,7 @@ export const ProducerPanel = ({
   
   const partsCountMap = useMemo(() => {
     const map = new Map<number, { value?: number; isLoading: boolean }>()
-    filteredProducers.forEach((producer, index) => {
+    allProducers.forEach((producer, index) => {
       const query = partsCountQueries[index]
       map.set(producer.Id, {
         value: query?.data ?? undefined,
@@ -194,26 +117,26 @@ export const ProducerPanel = ({
       })
     })
     return map
-  }, [filteredProducers, partsCountQueries])
+  }, [allProducers, partsCountQueries])
   
   // Подсчет частоты префиксов
   const prefixFrequencyMap = useMemo(() => {
     const frequencyMap = new Map<string, number>()
-    filteredProducers.forEach((producer) => {
+    allProducers.forEach((producer) => {
       const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
       if (prefix && prefix !== '—') {
         frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
       }
     })
     return frequencyMap
-  }, [filteredProducers])
-  
+  }, [allProducers])
+
   const sortedProducers = useMemo(() => {
     if (!sortField) {
-      return filteredProducers
+      return allProducers
     }
     
-    const sorted = [...filteredProducers].sort((a, b) => {
+    const sorted = [...allProducers].sort((a, b) => {
       let comparison = 0
       
       switch (sortField) {
@@ -241,7 +164,7 @@ export const ProducerPanel = ({
     })
     
     return sorted
-  }, [filteredProducers, sortField, sortOrder, partsCountMap])
+  }, [allProducers, sortField, sortOrder, partsCountMap])
 
   // Автоматическая загрузка при прокрутке
   useEffect(() => {
@@ -256,7 +179,7 @@ export const ProducerPanel = ({
         }
       },
       {
-        root: panelBodyRef.current,
+        root: null,
         rootMargin: '100px',
         threshold: 0.1,
       },
@@ -297,49 +220,6 @@ export const ProducerPanel = ({
     )
   }
 
-  // Построение дерева производителей
-  const treeData = useMemo<ProducerTreeNode[]>(() => {
-    if (viewMode !== 'tree') {
-      return []
-    }
-
-    // Разделяем на оригинальные и неоригинальные
-    const originals = filteredProducers.filter((p) => {
-      const realId = p.RealId ?? p.Id
-      return p.Id === realId
-    })
-    
-    const nonOriginals = filteredProducers.filter((p) => {
-      const realId = p.RealId ?? p.Id
-      return p.Id !== realId
-    })
-
-    // Создаем карту для быстрого поиска
-    const producerMap = new Map<number, EtProducer>()
-    filteredProducers.forEach((p) => producerMap.set(p.Id, p))
-
-    // Строим дерево
-    const buildTreeNodes = (producers: EtProducer[]): ProducerTreeNode[] => {
-      return producers.map((producer) => {
-        // Находим дочерние производители
-        const children = nonOriginals
-          .filter((p) => (p.RealId ?? p.Id) === producer.Id)
-          .map((child) => ({
-            key: `producer-${child.Id}`,
-            producer: child,
-          }))
-
-        return {
-          key: `producer-${producer.Id}`,
-          producer,
-          children: children.length > 0 ? children : undefined,
-        }
-      })
-    }
-
-    return buildTreeNodes(originals)
-  }, [filteredProducers, viewMode, selectedProducer, selectedProducerIds, partsCountMap, prefixFrequencyMap])
-
   const renderRatingBadge = (rating?: number | null) => {
     if (rating === undefined || rating === null || rating < 0) {
       return (
@@ -364,11 +244,9 @@ export const ProducerPanel = ({
 
   const createMutation = useMutation({
     mutationFn: createProducer,
-    onSuccess: async () => {
+    onSuccess: () => {
       message.success('Производитель создан')
-      // Инвалидируем и немедленно обновляем кэш
-      await queryClient.invalidateQueries({ queryKey: ['producers'] })
-      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['producers'] })
       closeModal()
     },
   })
@@ -376,30 +254,21 @@ export const ProducerPanel = ({
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
       updateProducer(id, payload),
-    onSuccess: async (updatedProducer, variables) => {
+    onSuccess: () => {
       message.success('Изменения сохранены')
-      // Обновляем выбранного производителя, если он был отредактирован
-      if (selectedProducer?.Id === variables.id && updatedProducer) {
-        onSelect(updatedProducer)
-      }
-      // Инвалидируем и немедленно обновляем кэш
-      await queryClient.invalidateQueries({ queryKey: ['producers'] })
-      await queryClient.invalidateQueries({ queryKey: ['producer', variables.id] })
-      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['producers'] })
       closeModal()
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteProducer(id),
-    onSuccess: async (_, id) => {
+    onSuccess: (_, id) => {
       message.success('Производитель удалён')
+      queryClient.invalidateQueries({ queryKey: ['producers'] })
       if (selectedProducer?.Id === id) {
         onSelect(null)
       }
-      // Инвалидируем и немедленно обновляем кэш
-      await queryClient.invalidateQueries({ queryKey: ['producers'] })
-      await queryClient.refetchQueries({ queryKey: ['producers'], type: 'active' })
     },
   })
 
@@ -411,69 +280,6 @@ export const ProducerPanel = ({
       cancelText: 'Отмена',
       okButtonProps: { danger: true, loading: deleteMutation.isPending },
       onOk: () => deleteMutation.mutate(producer.Id),
-    })
-  }
-
-  const linkMutation = useMutation({
-    mutationFn: ({ producerIds, targetProducerId }: { producerIds: number[]; targetProducerId: number }) =>
-      linkProducers(producerIds, targetProducerId),
-    onSuccess: () => {
-      message.success('Ссылка на оригинал успешно создана')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      setSelectedProducerIds(new Set())
-      setLinkModalOpen(false)
-      setLinkTargetProducer(null)
-    },
-    onError: () => {
-      message.error('Ошибка при создании ссылки на оригинал')
-    },
-  })
-
-  const handleProducerClick = (producer: EtProducer, event: MouseEvent<HTMLElement>) => {
-    // Если зажат Ctrl, добавляем/убираем из выделения
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault()
-      event.stopPropagation()
-      setSelectedProducerIds((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(producer.Id)) {
-          newSet.delete(producer.Id)
-        } else {
-          newSet.add(producer.Id)
-        }
-        return newSet
-      })
-      return
-    }
-
-    // Если есть выделенные производители и клик без Ctrl, показываем модальное окно ссылки на оригинал
-    if (selectedProducerIds.size > 0) {
-      event.preventDefault()
-      event.stopPropagation()
-      setLinkTargetProducer(producer)
-      setLinkModalOpen(true)
-      return
-    }
-
-    // Стандартное поведение - выбор производителя
-    if (searchType === 'without_producer') {
-      message.info('Сейчас включён поиск деталей без привязки к производителю.')
-      return
-    }
-    onSelect(producer)
-  }
-
-  const handleLinkConfirm = () => {
-    if (!linkTargetProducer) {
-      return
-    }
-    const producerIdsArray = Array.from(selectedProducerIds)
-    if (producerIdsArray.length === 0) {
-      return
-    }
-    linkMutation.mutate({
-      producerIds: producerIdsArray,
-      targetProducerId: linkTargetProducer.Id,
     })
   }
 
@@ -572,16 +378,19 @@ export const ProducerPanel = ({
             if (isActive) {
               rowClassNames.push('producer-row--active')
             }
-            if (selectedProducerIds.has(producer.Id)) {
-              rowClassNames.push('producer-row--selected')
-            }
 
             return (
               <ContextActionsMenu actions={actions}>
                 <List.Item
                   className="producer-row-wrapper"
                   style={{ padding: 0 }}
-                  onClick={(e) => handleProducerClick(producer, e)}
+                  onClick={() => {
+                    if (searchType === 'without_producer') {
+                      message.info('Сейчас включён поиск деталей без привязки к производителю.')
+                      return
+                    }
+                    onSelect(producer)
+                  }}
                 >
                   <div className={rowClassNames.join(' ')}>
                     <Typography.Text
@@ -676,120 +485,6 @@ export const ProducerPanel = ({
     )
   }
 
-  const renderTree = () => {
-    if (isLoading) {
-      return (
-        <Flex justify="center" align="center" style={{ minHeight: 200 }}>
-          <Spin />
-        </Flex>
-      )
-    }
-
-    if (treeData.length === 0) {
-      return <Empty description="Производители не найдены" />
-    }
-
-    return (
-      <Tree
-        treeData={treeData}
-        defaultExpandAll={false}
-        showLine={false}
-        blockNode
-        onSelect={(_selectedKeys, info) => {
-          const node = info.node as ProducerTreeNode
-          if (node.producer) {
-            if (searchType !== 'without_producer') {
-              onSelect(node.producer)
-            }
-          }
-        }}
-        titleRender={(node): React.ReactNode => {
-          const treeNode = node as ProducerTreeNode
-          if (!treeNode.producer) {
-            return node.title as React.ReactNode
-          }
-          const producer = treeNode.producer
-          const isActive = producer.Id === selectedProducer?.Id
-          const isSelected = selectedProducerIds.has(producer.Id)
-          const isNonOriginal = (producer.RealId ?? producer.Id) !== producer.Id
-          const partsCount = partsCountMap.get(producer.Id)?.value ?? 0
-          const prefix = producer.MarketPrefix ?? producer.Prefix ?? '—'
-          const prefixFrequency = prefixFrequencyMap.get(prefix) ?? 0
-
-          const actions = [
-            {
-              key: 'view',
-              label: (
-                <Space size={6}>
-                  <InfoCircleOutlined />
-                  Просмотр
-                </Space>
-              ),
-              onClick: () => setPreviewProducer(producer),
-            },
-            {
-              key: 'edit',
-              label: (
-                <Space size={6}>
-                  <EditOutlined />
-                  Редактировать
-                </Space>
-              ),
-              onClick: () => {
-                setEditingProducer(producer)
-                setModalOpen(true)
-              },
-            },
-            {
-              key: 'delete',
-              label: (
-                <Space size={6}>
-                  <DeleteOutlined />
-                  Удалить
-                </Space>
-              ),
-              danger: true,
-              onClick: () => confirmDelete(producer),
-            },
-          ]
-
-          return (
-            <ContextActionsMenu actions={actions}>
-              <div
-                className={`producer-tree-node ${isActive ? 'producer-tree-node--active' : ''} ${isSelected ? 'producer-tree-node--selected' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleProducerClick(producer, e as any)
-                }}
-              >
-                <Space size={4} style={{ width: '100%' }}>
-                  <span className="producer-tree-node__prefix">
-                    {renderRatingBadge(producer.Rating)}
-                    <span>
-                      {prefix}
-                      {prefixFrequency >= 2 && (
-                        <Typography.Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
-                          ({prefixFrequency})
-                        </Typography.Text>
-                      )}
-                    </span>
-                  </span>
-                  <span className="producer-tree-node__name">
-                    {producer.Name ?? '—'}
-                    {isNonOriginal && (
-                      <LinkOutlined style={{ fontSize: 12, color: '#1890ff', marginLeft: 4 }} />
-                    )}
-                  </span>
-                  <span className="producer-tree-node__count">{partsCount}</span>
-                </Space>
-              </div>
-            </ContextActionsMenu>
-          )
-        }}
-      />
-    )
-  }
-
   return (
     <Flex vertical style={{ height: '100%' }} gap={8} className="panel">
       <Flex justify="space-between" align="center" className="panel-header" style={{ marginBottom: 0 }}>
@@ -817,18 +512,6 @@ export const ProducerPanel = ({
           }}
           style={{ flex: 1 }}
         />
-        <Radio.Group
-          value={viewMode}
-          onChange={(e) => setViewMode(e.target.value)}
-          size="small"
-        >
-          <Radio.Button value="list" title="Список">
-            <UnorderedListOutlined />
-          </Radio.Button>
-          <Radio.Button value="tree" title="Дерево">
-            <ApartmentOutlined />
-          </Radio.Button>
-        </Radio.Group>
         <Select
           value={filterMode}
           onChange={(value: ProducerFilterMode) => setFilterMode(value)}
@@ -845,7 +528,7 @@ export const ProducerPanel = ({
         />
       </Space.Compact>
 
-      <div ref={panelBodyRef} className="panel-body">{viewMode === 'tree' ? renderTree() : renderList()}</div>
+      <div className="panel-body">{renderList()}</div>
 
       <ProducerDetailsDrawer
         producer={previewProducer}
@@ -871,72 +554,6 @@ export const ProducerPanel = ({
         loading={createMutation.isPending || updateMutation.isPending}
         initialValues={editingProducer ?? { Rating: 0 }}
       />
-
-      <Modal
-        title="Ссылка на оригинал"
-        open={linkModalOpen}
-        onOk={handleLinkConfirm}
-        onCancel={() => {
-          setLinkModalOpen(false)
-          setLinkTargetProducer(null)
-        }}
-        okText="Связать с оригиналом"
-        cancelText="Отмена"
-        confirmLoading={linkMutation.isPending}
-        width={600}
-      >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <div>
-            <Typography.Text strong>Выбранные производители для ссылки на оригинал:</Typography.Text>
-            <List
-              size="small"
-              bordered
-              style={{ marginTop: 8, maxHeight: 200, overflow: 'auto' }}
-              dataSource={(() => {
-                if (!filteredProducers || filteredProducers.length === 0) {
-                  return []
-                }
-                const selectedProducers = Array.from(selectedProducerIds)
-                  .map((id) => filteredProducers.find((p) => p.Id === id))
-                  .filter((p): p is EtProducer => p !== undefined)
-                return selectedProducers
-              })()}
-              renderItem={(producer) => (
-                <List.Item>
-                  <Space>
-                    <Typography.Text strong>{producer.Prefix ?? '—'}</Typography.Text>
-                    <Typography.Text>{producer.Name ?? '—'}</Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      (ID: {producer.Id})
-                    </Typography.Text>
-                  </Space>
-                </List.Item>
-              )}
-            />
-          </div>
-          
-          <div>
-            <Typography.Text strong>Связать с оригинальным производителем:</Typography.Text>
-            <div style={{ marginTop: 8, padding: 12, background: 'var(--ant-color-fill-tertiary)', borderRadius: 4 }}>
-              <Space direction="vertical" size={4}>
-                <Typography.Text strong>
-                  {linkTargetProducer?.Name ?? '—'}
-                </Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Префикс: {linkTargetProducer?.Prefix ?? '—'}
-                </Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  ID: {linkTargetProducer?.Id}
-                </Typography.Text>
-              </Space>
-            </div>
-          </div>
-          
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            RealId выделенных производителей будет заменен на ID выбранного производителя ({linkTargetProducer?.Id}).
-          </Typography.Text>
-        </Space>
-      </Modal>
     </Flex>
   )
 }

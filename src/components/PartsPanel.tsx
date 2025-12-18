@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Dropdown, Empty, Flex, Input, message, Modal, Select, Space, Spin, Table, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import type { SortOrder } from 'antd/es/table/interface'
 import type { EtPart, EtProducer } from '../api/types.ts'
 import { createPart, deletePart, fetchPartsPage, fetchPartsPageWithoutProducer, fetchStringsByIds, updatePart } from '../api/parts.ts'
 import type { PartsPageResult } from '../api/parts.ts'
+import { fetchProducerById } from '../api/producers.ts'
 import { PartDetailsDrawer } from './PartDetailsDrawer.tsx'
-import { PartFormModal } from './PartFormModal.tsx'
+import { PartFormModal } from './partFormModal/PartFormModal.tsx'
 
 type SearchType = 'by_producer' | 'without_producer'
 type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -37,8 +39,8 @@ interface PartsPanelProps {
   producer?: EtProducer | null
   onSelectPart: (part: EtPart | null) => void
   selectedPart?: EtPart | null
+  onFocusProducer?: (producer: EtProducer) => void
   onSearchTypeChange?: (type: SearchType) => void
-  onProducerIdsChange?: (producerIds: number[]) => void
   autoEditPart?: EtPart | null
   onAutoEditProcessed?: () => void
   initialSearch?: string
@@ -49,8 +51,8 @@ export const PartsPanel = ({
   producer,
   onSelectPart,
   selectedPart,
+  onFocusProducer,
   onSearchTypeChange,
-  onProducerIdsChange,
   autoEditPart,
   onAutoEditProcessed,
   initialSearch,
@@ -79,8 +81,7 @@ export const PartsPanel = ({
       onSearchTypeChange?.(initialSearchType)
       initialSearchTypeProcessedRef.current = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSearchType])
+  }, [initialSearchType, onSearchTypeChange])
   const [codeFilterMode, setCodeFilterMode] = useState<CodeFilterMode>(() => savedFilters?.codeFilterMode ?? 'startsWith')
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingPart, setEditingPart] = useState<EtPart | null>(null)
@@ -154,23 +155,6 @@ export const PartsPanel = ({
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const hasProducer = Boolean(producer?.Id)
 
-  // Извлекаем ProducerId из найденных деталей при поиске без производителя
-  const producerIdsFromParts = useMemo(() => {
-    if (searchType === 'without_producer' && parts.length > 0) {
-      return Array.from(
-        new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number'))
-      )
-    }
-    return []
-  }, [parts, searchType])
-
-  // Передаем ProducerId в родительский компонент
-  useEffect(() => {
-    if (onProducerIdsChange) {
-      onProducerIdsChange(producerIdsFromParts)
-    }
-  }, [producerIdsFromParts, onProducerIdsChange])
-
   useEffect(() => {
     tableContainerRef.current?.scrollTo({ top: 0 })
   }, [producer?.Id])
@@ -240,6 +224,31 @@ export const PartsPanel = ({
   const normalizedSearchTerm = normalizeValue(trimmedSearch)
   
   // Загружаем производителей для деталей, когда поиск без производителя
+  const producerIds = useMemo(() => {
+    if (searchType === 'without_producer') {
+      return Array.from(new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number')))
+    }
+    return []
+  }, [parts, searchType])
+
+  const producersQueries = useQueries({
+    queries: producerIds.map((producerId) => ({
+      queryKey: ['producer', producerId],
+      queryFn: () => fetchProducerById(producerId),
+      enabled: searchType === 'without_producer',
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  const producersMap = useMemo(() => {
+    const map = new Map<number, EtProducer>()
+    producersQueries.forEach((query, index) => {
+      if (query.data) {
+        map.set(producerIds[index], query.data)
+      }
+    })
+    return map
+  }, [producersQueries, producerIds])
 
   // Загружаем строки для деталей
   const stringsIdsForQuery = useMemo(
@@ -318,6 +327,16 @@ export const PartsPanel = ({
     })
   }, [parts, rawSearchTerm, normalizedSearchTerm, stringsMap, searchType])
 
+  const handleProducerFilter = (producerId: number) => {
+    if (!onFocusProducer) {
+      return
+    }
+
+    const producerFromMap = producersMap.get(producerId)
+    if (producerFromMap) {
+      onFocusProducer(producerFromMap)
+    }
+  }
 
   const resolvedTotalCount = totalParts ?? (hasProducer ? parts.length : undefined)
   
@@ -440,106 +459,30 @@ export const PartsPanel = ({
 
   const createMutation = useMutation({
     mutationFn: createPart,
-    onSuccess: async () => {
+    onSuccess: () => {
       message.success('Деталь добавлена')
-      // Инвалидируем и немедленно обновляем кэш
-      await queryClient.invalidateQueries({ queryKey: ['parts'] })
-      await queryClient.refetchQueries({ queryKey: ['parts'], type: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       closeModal()
     },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
-    onMutate: async (variables) => {
-      // Отменяем исходящие запросы, чтобы они не перезаписали оптимистичное обновление
-      await queryClient.cancelQueries({ queryKey: ['parts'] })
-      
-      // Сохраняем предыдущее значение для отката
-      const previousData = queryClient.getQueriesData({ queryKey: ['parts'] })
-      
-      // Оптимистично обновляем все запросы деталей
-      queryClient.setQueriesData(
-        { queryKey: ['parts'], exact: false },
-        (oldData: any) => {
-          if (!oldData?.pages) return oldData
-          
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page: PartsPageResult) => ({
-              ...page,
-              items: page.items.map((item: EtPart) =>
-                item.Id === variables.id
-                  ? { ...item, ...variables.payload }
-                  : item
-              ),
-            })),
-          }
-        },
-      )
-      
-      // Обновляем выбранную деталь сразу
-      if (selectedPart?.Id === variables.id) {
-        onSelectPart({ ...selectedPart, ...variables.payload })
-      }
-      
-      return { previousData }
-    },
-    onSuccess: async (updatedPart, variables) => {
+    onSuccess: () => {
       message.success('Деталь сохранена')
-      
-      // Обновляем данные с сервера для всех запросов
-      queryClient.setQueriesData(
-        { queryKey: ['parts'], exact: false },
-        (oldData: any) => {
-          if (!oldData?.pages) return oldData
-          
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page: PartsPageResult) => ({
-              ...page,
-              items: page.items.map((item: EtPart) =>
-                item.Id === variables.id && updatedPart
-                  ? { ...item, ...updatedPart }
-                  : item
-              ),
-            })),
-          }
-        },
-      )
-      
-      // Обновляем выбранную деталь с данными с сервера
-      if (selectedPart?.Id === variables.id && updatedPart) {
-        onSelectPart({ ...selectedPart, ...updatedPart })
-      }
-      
-      // Инвалидируем для синхронизации
-      await queryClient.invalidateQueries({ queryKey: ['parts'] })
-      
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       closeModal()
-    },
-    onError: (error, _variables, context) => {
-      // Откатываем изменения при ошибке
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data)
-        })
-      }
-      console.error('Ошибка при сохранении детали:', error)
-      message.error('Ошибка при сохранении детали')
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deletePart(id),
-    onSuccess: async (_, id) => {
+    onSuccess: (_, id) => {
       message.success('Деталь удалена')
+      queryClient.invalidateQueries({ queryKey: ['parts'] })
       if (selectedPart?.Id === id) {
         onSelectPart(null)
       }
-      // Инвалидируем и немедленно обновляем кэш
-      await queryClient.invalidateQueries({ queryKey: ['parts'] })
-      await queryClient.refetchQueries({ queryKey: ['parts'], type: 'active' })
     },
   })
 
@@ -555,22 +498,14 @@ export const PartsPanel = ({
   }
 
   const handleSubmit = (values: Partial<EtPart>) => {
+    if (!producer) {
+      return
+    }
+
+    const payload = { ...values, ProducerId: producer.Id }
     if (editingPart) {
-      // При редактировании используем ProducerId из editingPart, если producer не задан
-      const payload = producer 
-        ? { ...values, ProducerId: producer.Id }
-        : editingPart.ProducerId 
-          ? { ...values, ProducerId: editingPart.ProducerId }
-          : values
-      
       updateMutation.mutate({ id: editingPart.Id, payload })
     } else {
-      // При создании нужен producer
-      if (!producer) {
-        message.error('Выберите производителя для создания детали')
-        return
-      }
-      const payload = { ...values, ProducerId: producer.Id }
       createMutation.mutate(payload)
     }
   }
@@ -647,22 +582,18 @@ export const PartsPanel = ({
         multiple: 6,
       },
       sortDirections: ['ascend', 'descend'],
-      render: (value: string, record: EtPart) => {
+      render: (value: string) => {
         if (!value) {
           return '-'
         }
         const truncated = truncateText(value)
-        const showCross = record.Old || record.Dead
-        
         return (
           <Typography.Text
             strong
             title={value}
             style={{
               cursor: 'copy',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              display: 'block',
               maxWidth: '100%',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -671,26 +602,55 @@ export const PartsPanel = ({
             }}
             onClick={(event) => handleCopy(event, value)}
           >
-            {showCross && (
-              <span 
-                style={{ 
-                  color: '#ff4d4f', 
-                  fontSize: 'inherit', 
-                  fontWeight: 700,
-                  lineHeight: 'inherit',
-                  flexShrink: 0,
-                  display: 'inline-block',
-                  marginRight: '2px',
-                }} 
-              >
-                ×
-              </span>
-            )}
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{truncated}</span>
+            {truncated}
           </Typography.Text>
         )
       },
     },
+    ...(searchType === 'without_producer'
+      ? [
+          {
+            title: 'Производитель',
+            dataIndex: 'ProducerId',
+            sorter: {
+              compare: (a: EtPart, b: EtPart) => {
+                const producerA = producersMap.get(a.ProducerId)
+                const producerB = producersMap.get(b.ProducerId)
+                return compareStrings(producerA?.Name ?? producerA?.Prefix ?? '', producerB?.Name ?? producerB?.Prefix ?? '')
+              },
+              multiple: 5,
+            },
+            sortDirections: ['ascend', 'descend'] as SortOrder[],
+            render: (_: unknown, record: EtPart) => {
+              const producer = producersMap.get(record.ProducerId)
+              if (!producer) {
+                return <Spin size="small" />
+              }
+              const label = producer.Name ?? producer.Prefix ?? '—'
+              const truncated = truncateText(label)
+              return (
+                <Typography.Link
+                  title={label}
+                  style={{
+                    fontSize: 12,
+                    maxWidth: '100%',
+                    display: 'block',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleProducerFilter(record.ProducerId)
+                  }}
+                >
+                  {truncated}
+                </Typography.Link>
+              )
+            },
+    },
+        ]
+      : []),
     {
       title: 'Лп. код',
       dataIndex: 'LongCode',
@@ -898,23 +858,17 @@ export const PartsPanel = ({
             value={searchInput}
             onChange={(event) => {
               const { value } = event.target
-              // Удаляем все небуквенные и нечисловые символы
-              const normalizedValue = normalizeValue(value) || ''
-              setSearchInput(normalizedValue)
+              setSearchInput(value)
               // Поиск происходит динамически через useEffect для обоих режимов
               // Для режима "without_producer" с debounce, для "by_producer" сразу
-              if (!normalizedValue) {
+              if (!value) {
                 setSearch('')
-              } else {
-                setSearch(normalizedValue)
               }
             }}
             onSearch={(value) => {
               // При нажатии Enter или кнопки поиска сразу применяем фильтр
-              // Удаляем все небуквенные и нечисловые символы
-              const normalizedValue = normalizeValue(value) || ''
-              setSearch(normalizedValue)
-              setSearchInput(normalizedValue)
+              setSearch(value.trim())
+              setSearchInput(value.trim())
             }}
             disabled={searchType === 'by_producer' && !producer}
             style={{ flex: 1 }}
@@ -985,6 +939,7 @@ export const PartsPanel = ({
         loading={createMutation.isPending || updateMutation.isPending}
         onCancel={closeModal}
         onSubmit={handleSubmit}
+        brand={producer?.Name}
       />
     </Flex>
   )

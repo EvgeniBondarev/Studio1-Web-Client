@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Layout, Dropdown, Button, Menu, ConfigProvider, theme } from 'antd'
 import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, SettingOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
@@ -56,7 +56,6 @@ const App = () => {
   const [autoEditPart, setAutoEditPart] = useState<EtPart | null>(null)
   const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
   const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
-  const [partsProducerIds, setPartsProducerIds] = useState<number[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -183,14 +182,6 @@ const App = () => {
     setSelectedProducer(null)
     setSelectedPart(null)
   }
-
-  const handlePartsSearchTypeChange = useCallback((type: 'by_producer' | 'without_producer') => {
-    setPartsSearchType(type)
-    if (type === 'by_producer') {
-      setPartsProducerIds([])
-    }
-  }, [])
-
   const profileMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -361,7 +352,6 @@ const App = () => {
                 externalSearch={producerSearch}
                 onSearchChange={setProducerSearch}
                 searchType={partsSearchType}
-                filterProducerIds={partsSearchType === 'without_producer' ? partsProducerIds : undefined}
             />
           </div>
             <div
@@ -375,8 +365,13 @@ const App = () => {
               producer={selectedProducer}
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
-                onSearchTypeChange={handlePartsSearchTypeChange}
-                onProducerIdsChange={setPartsProducerIds}
+                onFocusProducer={(producer) => {
+                  setProducerSearch(
+                    producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '',
+                  )
+                  setSelectedProducer(producer)
+                }}
+                onSearchTypeChange={setPartsSearchType}
                 autoEditPart={autoEditPart}
                 onAutoEditProcessed={() => setAutoEditPart(null)}
                 initialSearch={initialPartsSearch}
