@@ -1,8 +1,8 @@
 import {useEffect, useRef, useState} from 'react'
 import {useMutation, useQueryClient} from '@tanstack/react-query'
 import {message, Modal} from 'antd'
-import type {EtPart, EtProducer} from '../../api/types.ts'
-import {createPart, deletePart, updatePart} from '../../api/parts.ts'
+import type {EtPart, EtProducer} from '../../../api/types.ts'
+import {createPart, deletePart, updatePart} from '../../../api/parts.ts'
 
 export const usePartFormModal = (
     producer?: EtProducer | null,

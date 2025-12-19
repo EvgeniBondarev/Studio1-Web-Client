@@ -1,8 +1,8 @@
 import {Button, Flex, Space, Typography} from 'antd';
-import type {EtProducer} from '../../api/types.ts';
+import type {EtProducer} from '../../../api/types.ts';
 import type {ReactNode} from 'react';
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons';
-import type {SearchType} from './PartsPanel.tsx';
+import type {SearchType} from '../PartsPanel.tsx';
 
 type Props = {
     producer?: EtProducer | null;

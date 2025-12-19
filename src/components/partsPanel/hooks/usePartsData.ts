@@ -5,10 +5,10 @@ import {
     fetchPartsPageWithoutProducer,
     fetchStringsByIds,
     type PartsPageResult
-} from '../../api/parts.ts';
-import { fetchProducerById } from '../../api/producers.ts';
-import type {EtProducer} from '../../api/types.ts';
-import type {CodeFilterMode, SearchType} from './PartsPanel.tsx';
+} from '../../../api/parts.ts';
+import { fetchProducerById } from '../../../api/producers.ts';
+import type {EtProducer} from '../../../api/types.ts';
+import type {CodeFilterMode, SearchType} from '../PartsPanel.tsx';
 
 
 interface UsePartsDataProps {

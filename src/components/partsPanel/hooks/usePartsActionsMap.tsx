@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Space } from 'antd'
 import { InfoCircleOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
-import type { EtPart } from '../../api/types'
-import type {ContextMenuAction} from './PartsContextMenu.tsx';
+import type { EtPart } from '../../../api/types.ts'
+import type {ContextMenuAction} from '../components/PartsContextMenu.tsx';
 
 
 interface UsePartsActionsMapProps {

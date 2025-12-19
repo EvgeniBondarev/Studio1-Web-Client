@@ -1,9 +1,9 @@
 import {type MouseEvent} from 'react'
 import type {ColumnsType} from 'antd/es/table'
 import {Typography, Spin} from 'antd'
-import type {EtPart, EtProducer} from '../../api/types.ts'
+import type {EtPart, EtProducer} from '../../../api/types.ts'
 import type {SortOrder} from 'antd/es/table/interface';
-import type {SearchType} from './PartsPanel.tsx';
+import type {SearchType} from '../PartsPanel.tsx';
 
 interface UsePartsTableProps {
     searchType: SearchType

@@ -1,5 +1,5 @@
 import { Empty, Spin } from 'antd';
-import type { ProductImage } from '../../../api/types.ts';
+import type { ProductImage } from '../../../../../api/types.ts';
 import { PRImages } from './prImages/PRImages.tsx';
 
 type Props = {

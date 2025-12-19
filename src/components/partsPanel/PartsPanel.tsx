@@ -2,17 +2,17 @@ import {useEffect, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
 import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
-import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
-import {PartsHeader} from './PartsHeader.tsx';
-import {PartsSearch} from './PartsSearch.tsx';
-import {usePartsActionsMap} from './usePartsActionsMap.tsx';
-import {usePartsFilter} from './usePartsFilter.tsx';
-import {usePartsData} from './usePartsData.ts';
-import {usePartsTable} from './usePartsTable.tsx';
-import {PartsTable} from './PartsTable.tsx';
-import {usePartFormModal} from './usePartFormModal.ts';
-import {useCopyToClipboard} from './useCopyToClipboard.ts';
-import {useCountLabel} from './useCountLabel.ts';
+import {PartFormModal} from './components/partFormModal';
+import {PartsHeader} from './components/PartsHeader.tsx';
+import {PartsSearch} from './components/PartsSearch.tsx';
+import {usePartsActionsMap} from './hooks/usePartsActionsMap.tsx';
+import {usePartsFilter} from './hooks/usePartsFilter.tsx';
+import {usePartsData} from './hooks/usePartsData.ts';
+import {usePartsTable} from './hooks/usePartsTable.tsx';
+import {PartsTable} from './components/PartsTable.tsx';
+import {usePartFormModal} from './hooks/usePartFormModal.ts';
+import {useCopyToClipboard} from './hooks/useCopyToClipboard.ts';
+import {useCountLabel} from './hooks/useCountLabel.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'

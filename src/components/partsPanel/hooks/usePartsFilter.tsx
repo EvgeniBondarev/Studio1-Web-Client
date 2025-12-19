@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type {CodeFilterMode, SearchType} from './PartsPanel.tsx';
+import type {CodeFilterMode, SearchType} from '../PartsPanel.tsx';
 
 const PARTS_FILTER_SESSION_KEY = 'partsPanelFilters'
 

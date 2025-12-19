@@ -1,7 +1,7 @@
 import {Empty} from 'antd';
 import {PRVendorCategories} from './prVendorCategories/PRVendorCategories.tsx';
 import {PRAttributes} from './prAttributes/PRAttributes.tsx';
-import type {ProductAttribute, ProductVendorCategory} from '../../../api/types.ts';
+import type {ProductAttribute, ProductVendorCategory} from '../../../../../api/types.ts';
 
 type Props = {
     attributes?: ProductAttribute[]

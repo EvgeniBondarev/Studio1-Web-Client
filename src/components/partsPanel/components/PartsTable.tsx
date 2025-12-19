@@ -1,6 +1,6 @@
 import { type MouseEvent, useRef, useEffect, useState } from 'react'
 import { Empty, Flex, Table, Typography, Spin } from 'antd'
-import type { EtPart } from '../../api/types.ts'
+import type { EtPart } from '../../../api/types.ts'
 import {PartsContextMenu, type ContextMenuPosition, type ContextMenuAction} from './PartsContextMenu.tsx'
 
 interface PartsTableProps {
