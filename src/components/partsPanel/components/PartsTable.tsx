@@ -1,7 +1,7 @@
-import { type MouseEvent, useRef, useEffect, useState } from 'react'
-import { Empty, Flex, Table, Typography, Spin } from 'antd'
-import type { EtPart } from '../../../api/types.ts'
-import {PartsContextMenu, type ContextMenuPosition, type ContextMenuAction} from './PartsContextMenu.tsx'
+import {type MouseEvent, useEffect, useRef, useState} from 'react'
+import {Empty, Flex, Spin, Table, Typography} from 'antd'
+import type {EtPart} from '../../../api/types.ts'
+import {type ContextMenuAction, type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx'
 
 interface PartsTableProps {
     parts: EtPart[]
@@ -72,7 +72,7 @@ export const PartsTable = ({
             )
         }
 
-        const tableContent = filteredParts.length ? (
+        return filteredParts.length ? (
             <>
                 <Table
                     dataSource={filteredParts}
@@ -89,7 +89,7 @@ export const PartsTable = ({
                             onContextMenu: (e: MouseEvent<HTMLTableRowElement>) => {
                                 if (actions && actions.length > 0) {
                                     e.preventDefault()
-                                    setContextMenu({ partId, x: e.clientX, y: e.clientY })
+                                    setContextMenu({partId, x: e.clientX, y: e.clientY})
                                 }
                             },
                             className: (() => {
@@ -108,12 +108,12 @@ export const PartsTable = ({
                         ref={loadMoreRef}
                         vertical
                         align="center"
-                        style={{ padding: 12 }}
+                        style={{padding: 12}}
                         gap={4}
                     >
-                        {isFetchingNextPage && <Spin size="small" />}
+                        {isFetchingNextPage && <Spin size="small"/>}
                         {resolvedTotalCount !== undefined && typeof resolvedTotalCount === 'number' && resolvedTotalCount > parts.length && (
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            <Typography.Text type="secondary" style={{fontSize: 12}}>
                                 Еще {(resolvedTotalCount - parts.length).toLocaleString('ru-RU')} записей
                             </Typography.Text>
                         )}
@@ -121,10 +121,8 @@ export const PartsTable = ({
                 )}
             </>
         ) : (
-            <Empty description={trimmedSearch ? 'Ничего не найдено' : 'Пока нет деталей'} />
+            <Empty description={trimmedSearch ? 'Ничего не найдено' : 'Пока нет деталей'}/>
         )
-
-        return tableContent
     }
 
     return (

@@ -1,4 +1,4 @@
-import {type ReactNode, useEffect} from 'react'
+import {type ReactNode, useEffect, useMemo} from 'react'
 import { Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 
@@ -53,16 +53,17 @@ export const PartsContextMenu = ({
         }
     }, [position, onClose])
 
-    const menuItems: MenuProps['items'] = actions.map((action) => ({
+    const menuItems: MenuProps['items'] = useMemo(()=> actions.map((action) => ({
         key: action.key,
         label: action.label,
         onClick: (info) => {
             info.domEvent.stopPropagation()
+            info.domEvent.preventDefault()
             action.onClick()
             onClose()
         },
         danger: action.danger,
-    }))
+    })))
 
     return (
         <Dropdown
