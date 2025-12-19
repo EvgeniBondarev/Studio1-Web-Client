@@ -338,19 +338,6 @@ export const PartsPanel = ({
                 />
             )}
 
-
-            {/*<div className="panel-body" ref={tableContainerRef}>*/}
-            {/*    {renderBody()}*/}
-            {/*</div>*/}
-
-            {/*{contextMenu && (*/}
-            {/*    <PartsContextMenu*/}
-            {/*        actions={partsActionsMap.get(contextMenu.partId) || []}*/}
-            {/*        position={contextMenu}*/}
-            {/*        onClose={() => setContextMenu(null)}*/}
-            {/*    />*/}
-            {/*)}*/}
-
             <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
 
             <PartFormModal
