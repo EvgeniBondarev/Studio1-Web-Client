@@ -1,7 +1,6 @@
-import {useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode, type ChangeEvent} from 'react'
+import {useEffect, useMemo, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
 import {useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient} from '@tanstack/react-query'
-import {Dropdown, Empty, Flex,message, Modal, Space, Spin, Table, Typography} from 'antd'
-import {DeleteOutlined, EditOutlined, InfoCircleOutlined} from '@ant-design/icons'
+import { Empty, Flex,message, Modal, Spin, Table, Typography} from 'antd'
 import type {ColumnsType} from 'antd/es/table'
 import type {SortOrder} from 'antd/es/table/interface'
 import {
@@ -19,6 +18,8 @@ import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
 import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
 import {PartsHeader} from './PartsHeader.tsx';
 import {PartsSearch} from './PartsSearch.tsx';
+import {type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx';
+import {usePartsActionsMap} from './usePartsActionsMap.tsx';
 
 
 export type SearchType = 'by_producer' | 'without_producer'
@@ -96,32 +97,9 @@ export const PartsPanel = ({
     const [isModalOpen, setModalOpen] = useState(false)
     const [editingPart, setEditingPart] = useState<EtPart | null>(null)
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
-    const [contextMenu, setContextMenu] = useState<{ partId: number; x: number; y: number } | null>(null)
+    const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
     const queryClient = useQueryClient()
     const loadMoreRef = useRef<HTMLDivElement>(null)
-
-    // Закрываем контекстное меню при клике вне его
-    useEffect(() => {
-        if (!contextMenu) {
-            return
-        }
-        const handleClick = () => {
-            setContextMenu(null)
-        }
-        const handleContextMenu = () => {
-            setContextMenu(null)
-        }
-        // Небольшая задержка, чтобы не закрыть меню сразу после открытия
-        const timeout = setTimeout(() => {
-            document.addEventListener('click', handleClick)
-            document.addEventListener('contextmenu', handleContextMenu)
-        }, 100)
-        return () => {
-            clearTimeout(timeout)
-            document.removeEventListener('click', handleClick)
-            document.removeEventListener('contextmenu', handleContextMenu)
-        }
-    }, [contextMenu])
 
     const {
         data,
@@ -540,48 +518,15 @@ export const PartsPanel = ({
         compareStrings(getStringValue(first) ?? '', getStringValue(second) ?? '')
 
     // Создаем маппинг actions для каждой детали
-    const partsActionsMap = useMemo(() => {
-        const map = new Map<number, Array<{ key: string; label: ReactNode; onClick: () => void; danger?: boolean }>>()
-        filteredParts.forEach((part) => {
-            map.set(part.Id, [
-                {
-                    key: 'view',
-                    label: (
-                        <Space size={6}>
-                            <InfoCircleOutlined/>
-                            Просмотр
-                        </Space>
-                    ),
-                    onClick: () => setPreviewPart(part),
-                },
-                {
-                    key: 'edit',
-                    label: (
-                        <Space size={6}>
-                            <EditOutlined/>
-                            Редактировать
-                        </Space>
-                    ),
-                    onClick: () => {
-                        setEditingPart(part)
-                        setModalOpen(true)
-                    },
-                },
-                {
-                    key: 'delete',
-                    label: (
-                        <Space size={6}>
-                            <DeleteOutlined/>
-                            Удалить
-                        </Space>
-                    ),
-                    danger: true,
-                    onClick: () => confirmDelete(part),
-                },
-            ])
-        })
-        return map
-    }, [filteredParts])
+    const partsActionsMap = usePartsActionsMap({
+        filteredParts,
+        onView: (part) => setPreviewPart(part),
+        onEdit: (part) => {
+            setEditingPart(part)
+            setModalOpen(true)
+        },
+        onDelete: (part) => confirmDelete(part),
+    })
 
     const columns: ColumnsType<EtPart> = [
         {
@@ -835,6 +780,8 @@ export const PartsPanel = ({
         setSearchInput('')
     }
 
+
+
     return (
 
         <Flex vertical gap={8} style={{height: '100%'}} className="panel">
@@ -861,39 +808,11 @@ export const PartsPanel = ({
             </div>
 
             {contextMenu && (
-                <Dropdown
-                    open={true}
-                    menu={{
-                        items: partsActionsMap.get(contextMenu.partId)?.map((action) => ({
-                            key: action.key,
-                            label: action.label,
-                            onClick: (info) => {
-                                info.domEvent.stopPropagation()
-                                action.onClick()
-                                setContextMenu(null)
-                            },
-                            danger: action.danger,
-                        })) || [],
-                    }}
-                    trigger={['contextMenu']}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setContextMenu(null)
-                        }
-                    }}
-                    getPopupContainer={() => document.body}
-                >
-                    <div
-                        style={{
-                            position: 'fixed',
-                            left: contextMenu.x,
-                            top: contextMenu.y,
-                            width: 1,
-                            height: 1,
-                            pointerEvents: 'none',
-                        }}
+                <PartsContextMenu
+                        actions={partsActionsMap.get(contextMenu.partId) || []}
+                        position={contextMenu}
+                        onClose={()=>setContextMenu(null)}
                     />
-                </Dropdown>
             )}
 
             <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
