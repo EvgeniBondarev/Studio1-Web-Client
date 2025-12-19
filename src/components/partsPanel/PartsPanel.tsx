@@ -1,19 +1,14 @@
-import {useEffect, useMemo, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
-import {useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient} from '@tanstack/react-query'
+import {useEffect, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
+import {useMutation, useQueryClient} from '@tanstack/react-query'
 import {Empty, Flex, message, Modal, Spin, Table, Typography} from 'antd'
 import type {ColumnsType} from 'antd/es/table'
 import type {SortOrder} from 'antd/es/table/interface'
 import {
     createPart,
     deletePart,
-    fetchPartsPage,
-    fetchPartsPageWithoutProducer,
-    fetchStringsByIds,
     updatePart
 } from '../../api/parts.ts'
 import type {EtPart, EtProducer} from '../../api/types.ts';
-import type {PartsPageResult} from '../../api/parts.ts';
-import {fetchProducerById} from '../../api/producers.ts';
 import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
 import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
 import {PartsHeader} from './PartsHeader.tsx';
@@ -21,7 +16,7 @@ import {PartsSearch} from './PartsSearch.tsx';
 import {type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx';
 import {usePartsActionsMap} from './usePartsActionsMap.tsx';
 import {usePartsFilter} from './usePartsFilter.tsx';
-
+import {usePartsData} from './usePartsData.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -72,45 +67,36 @@ export const PartsPanel = ({
     const queryClient = useQueryClient()
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
+    const normalizeValue = (value?: string | null) =>
+        value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
+    const toLowerValue = (value?: string | null) => (value ? value.toLowerCase() : '')
+    const trimmedSearch = search.trim()
+    const rawSearchTerm = toLowerValue(trimmedSearch)
+    const normalizedSearchTerm = normalizeValue(trimmedSearch)
+
     const {
-        data,
+        parts,
+        filteredParts,
+        totalParts,
+        producersMap,
+        stringsMap,
         isLoading,
         isFetching,
-        fetchNextPage,
-        hasNextPage,
         isFetchingNextPage,
-        refetch: refetchParts,
-    } = useInfiniteQuery({
-        queryKey: ['parts', producer?.Id, searchType, search, codeFilterMode],
-        queryFn: ({pageParam}) => {
-            if (searchType === 'without_producer') {
-                return fetchPartsPageWithoutProducer(search || undefined, 'exact', pageParam as string | undefined)
-            }
-            return producer
-                ? fetchPartsPage(
-                    producer.Id,
-                    pageParam as string | undefined,
-                    search?.trim() || undefined,
-                    codeFilterMode,
-                )
-                : Promise.resolve(undefined)
-        },
-        enabled:
-            searchType === 'without_producer'
-                ? Boolean(search?.trim()) // Для "without_producer" ждем debounce
-                : Boolean(producer?.Id), // Для "by_producer" нужен только producer
-        getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
-        initialPageParam: undefined as string | undefined,
+        hasNextPage,
+        isStringsFetching,
+        fetchNextPage,
+        refetchParts,
+        getStringValue,
+    } = usePartsData({
+        producer,
+        searchType,
+        search,
+        codeFilterMode,
+        normalizedSearchTerm,
+        rawSearchTerm,
     })
 
-    const partsPages = useMemo<PartsPageResult[]>(() => {
-        if (!data?.pages) {
-            return []
-        }
-        return data.pages.filter((page): page is PartsPageResult => Boolean(page))
-    }, [data])
-    const parts = useMemo(() => partsPages.flatMap((page) => page.items), [partsPages])
-    const totalParts = partsPages[0]?.total
     const tableContainerRef = useRef<HTMLDivElement>(null)
     const hasProducer = Boolean(producer?.Id)
 
@@ -143,117 +129,6 @@ export const PartsPanel = ({
             observer.disconnect()
         }
     }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
-    const normalizeValue = (value?: string | null) =>
-        value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
-    const toLowerValue = (value?: string | null) => (value ? value.toLowerCase() : '')
-    const trimmedSearch = search.trim()
-    const rawSearchTerm = toLowerValue(trimmedSearch)
-    const normalizedSearchTerm = normalizeValue(trimmedSearch)
-
-    // Загружаем производителей для деталей, когда поиск без производителя
-    const producerIds = useMemo(() => {
-        if (searchType === 'without_producer') {
-            return Array.from(new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number')))
-        }
-        return []
-    }, [parts, searchType])
-
-    const producersQueries = useQueries({
-        queries: producerIds.map((producerId) => ({
-            queryKey: ['producer', producerId],
-            queryFn: () => fetchProducerById(producerId),
-            enabled: searchType === 'without_producer',
-            staleTime: 5 * 60 * 1000,
-        })),
-    })
-
-    const producersMap = useMemo(() => {
-        const map = new Map<number, EtProducer>()
-        producersQueries.forEach((query, index) => {
-            if (query.data) {
-                map.set(producerIds[index], query.data)
-            }
-        })
-        return map
-    }, [producersQueries, producerIds])
-
-    // Загружаем строки для деталей
-    const stringsIdsForQuery = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    parts
-                        .flatMap((part) => [part.Name, part.Description])
-                        .filter((id): id is number => typeof id === 'number'),
-                ),
-            ),
-        [parts],
-    )
-
-    const {
-        data: stringsMap = {},
-        isFetching: isStringsFetching,
-    } = useQuery<Record<number, string>>({
-        queryKey: ['partsStrings', producer?.Id, stringsIdsForQuery, searchType, codeFilterMode],
-        queryFn: () => {
-            if (searchType === 'without_producer' && stringsIdsForQuery.length > 0) {
-                // Для поиска без производителя нужно загружать строки для каждого производителя
-                // Пока используем первый найденный ProducerId
-                const firstProducerId = parts.find((p) => p.ProducerId)?.ProducerId
-                if (firstProducerId) {
-                    return fetchStringsByIds(firstProducerId, stringsIdsForQuery)
-                }
-            }
-            return producer && stringsIdsForQuery.length
-                ? fetchStringsByIds(producer.Id, stringsIdsForQuery)
-                : Promise.resolve<Record<number, string>>({})
-        },
-        enabled: (searchType === 'without_producer' && stringsIdsForQuery.length > 0) || (Boolean(producer?.Id) && stringsIdsForQuery.length > 0),
-    })
-
-    const getStringValue = (id?: number) => (id ? stringsMap[id] : undefined)
-
-    const filteredParts = useMemo(() => {
-        // Если поиск без производителя, фильтрация уже выполнена на сервере
-        if (searchType === 'without_producer') {
-            return parts
-        }
-
-        // Для поиска по производителю Code уже отфильтрован на сервере
-        // Применяем локальную фильтрацию только для остальных полей
-        if (!rawSearchTerm && !normalizedSearchTerm) {
-            return parts
-        }
-
-        return parts.filter((part) => {
-            // Code уже отфильтрован на сервере по выбранному режиму
-            // Проверяем только остальные поля (LongCode, Name, Description)
-            const stringName = getStringValue(part.Name)
-            const stringDescription = getStringValue(part.Description)
-            const rawCandidates = [
-                toLowerValue(part.LongCode),
-                toLowerValue(stringName),
-                toLowerValue(stringDescription),
-            ].filter(Boolean)
-
-            if (rawSearchTerm && rawCandidates.some((candidate) => candidate.includes(rawSearchTerm))) {
-                return true
-            }
-
-            if (!normalizedSearchTerm) {
-                return false
-            }
-
-            const normalizedCandidates = [
-                normalizeValue(part.LongCode),
-                normalizeValue(stringName),
-                normalizeValue(stringDescription),
-            ].filter(Boolean)
-
-            return normalizedCandidates.some((candidate) => candidate.includes(normalizedSearchTerm))
-        })
-    }, [parts, rawSearchTerm, normalizedSearchTerm, stringsMap, searchType])
 
     const handleProducerFilter = (producerId: number) => {
         if (!onFocusProducer) {
