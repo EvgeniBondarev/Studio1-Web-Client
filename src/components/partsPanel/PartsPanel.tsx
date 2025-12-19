@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
 import {useMutation, useQueryClient} from '@tanstack/react-query'
-import {Empty, Flex, message, Modal, Spin, Table, Typography} from 'antd'
+import {Empty, Flex, message, Modal} from 'antd'
 import {
     createPart,
     deletePart,
@@ -11,11 +11,11 @@ import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
 import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
 import {PartsHeader} from './PartsHeader.tsx';
 import {PartsSearch} from './PartsSearch.tsx';
-import {type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx';
 import {usePartsActionsMap} from './usePartsActionsMap.tsx';
 import {usePartsFilter} from './usePartsFilter.tsx';
 import {usePartsData} from './usePartsData.ts';
 import {usePartsTable} from './usePartsTable.tsx';
+import {PartsTable} from './PartsTable.tsx';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -62,9 +62,7 @@ export const PartsPanel = ({
     const [isModalOpen, setModalOpen] = useState(false)
     const [editingPart, setEditingPart] = useState<EtPart | null>(null)
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
-    const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
     const queryClient = useQueryClient()
-    const loadMoreRef = useRef<HTMLDivElement>(null)
 
     const normalizeValue = (value?: string | null) =>
         value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
@@ -101,32 +99,6 @@ export const PartsPanel = ({
     useEffect(() => {
         tableContainerRef.current?.scrollTo({top: 0})
     }, [producer?.Id])
-
-    // Автоматическая загрузка при прокрутке
-    useEffect(() => {
-        if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
-            return
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-                    fetchNextPage()
-                }
-            },
-            {
-                root: null,
-                rootMargin: '100px',
-                threshold: 0.1,
-            },
-        )
-
-        observer.observe(loadMoreRef.current)
-
-        return () => {
-            observer.disconnect()
-        }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
     const handleProducerFilter = (producerId: number) => {
         if (!onFocusProducer) {
@@ -197,10 +169,7 @@ export const PartsPanel = ({
         copyValue(value)
     }
 
-    const {
-        columns,
-        // Можно экспортировать другие функции если они нужны где-то еще
-    } = usePartsTable({
+    const {columns} = usePartsTable({
         searchType,
         producersMap,
         stringsMap,
@@ -293,81 +262,6 @@ export const PartsPanel = ({
         onDelete: (part) => confirmDelete(part),
     })
 
-    const renderBody = () => {
-        if (searchType === 'by_producer' && !producer) {
-            return <Empty description="Выберите производителя"/>
-        }
-
-        if (searchType === 'without_producer' && !search?.trim()) {
-            return <Empty description="Введите код для поиска"/>
-        }
-
-        if (initialLoading) {
-            return (
-                <Flex justify="center" align="center" style={{minHeight: 200}}>
-                    <Spin/>
-                </Flex>
-            )
-        }
-
-        const tableContent = filteredParts.length ? (
-            <Table
-                dataSource={filteredParts}
-                rowKey="Id"
-                columns={columns}
-                size="small"
-                pagination={false}
-                onRow={(record) => {
-                    const partId = record.Id
-                    const actions = partsActionsMap.get(partId)
-
-                    return {
-                        onClick: () => onSelectPart(record),
-                        onContextMenu: (e: MouseEvent<HTMLTableRowElement>) => {
-                            if (actions && actions.length > 0) {
-                                e.preventDefault()
-                                setContextMenu({partId, x: e.clientX, y: e.clientY})
-                            }
-                        },
-                        className: (() => {
-                            const isActive = record.Id === selectedPart?.Id
-                            const isAccepted = record.Accepted
-                            if (isActive) {
-                                return 'table-row--active'
-                            }
-                            return isAccepted ? '' : 'table-row--inactive'
-                        })(),
-                    }
-                }}
-            />
-        ) : (
-            <Empty description={trimmedSearch ? 'Ничего не найдено' : 'Пока нет деталей'}/>
-        )
-
-        return (
-            <>
-                {tableContent}
-                {(hasNextPage || isFetchingNextPage) && (
-                    <Flex
-                        ref={loadMoreRef}
-                        vertical
-                        align="center"
-                        style={{padding: 12}}
-                        gap={4}
-                    >
-                        {isFetchingNextPage && (
-                            <Spin size="small"/>
-                        )}
-                        {resolvedTotalCount !== undefined && typeof resolvedTotalCount === 'number' && resolvedTotalCount > parts.length && (
-                            <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                Еще {((resolvedTotalCount - parts.length).toLocaleString('ru-RU'))} записей
-                            </Typography.Text>
-                        )}
-                    </Flex>
-                )}
-            </>
-        )
-    }
     //--------для PartsHeader
     const handleReload = () => {
         refetchParts()
@@ -418,18 +312,44 @@ export const PartsPanel = ({
                          producer={producer}
             />
 
-
-            <div className="panel-body" ref={tableContainerRef}>
-                {renderBody()}
-            </div>
-
-            {contextMenu && (
-                <PartsContextMenu
-                    actions={partsActionsMap.get(contextMenu.partId) || []}
-                    position={contextMenu}
-                    onClose={() => setContextMenu(null)}
+            {searchType === 'by_producer' && !producer ? (
+                <div className="panel-body">
+                    <Empty description="Выберите производителя"/>
+                </div>
+            ) : searchType === 'without_producer' && !search?.trim() ? (
+                <div className="panel-body">
+                    <Empty description="Введите код для поиска"/>
+                </div>
+            ) : (
+                <PartsTable
+                    parts={parts}
+                    filteredParts={filteredParts}
+                    columns={columns}
+                    selectedPart={selectedPart}
+                    onSelectPart={onSelectPart}
+                    partsActionsMap={partsActionsMap}
+                    hasNextPage={hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    resolvedTotalCount={resolvedTotalCount}
+                    fetchNextPage={fetchNextPage}
+                    containerRef={tableContainerRef}
+                    trimmedSearch={trimmedSearch}
+                    initialLoading={initialLoading}
                 />
             )}
+
+
+            {/*<div className="panel-body" ref={tableContainerRef}>*/}
+            {/*    {renderBody()}*/}
+            {/*</div>*/}
+
+            {/*{contextMenu && (*/}
+            {/*    <PartsContextMenu*/}
+            {/*        actions={partsActionsMap.get(contextMenu.partId) || []}*/}
+            {/*        position={contextMenu}*/}
+            {/*        onClose={() => setContextMenu(null)}*/}
+            {/*    />*/}
+            {/*)}*/}
 
             <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
 
