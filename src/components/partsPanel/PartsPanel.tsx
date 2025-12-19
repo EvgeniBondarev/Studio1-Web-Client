@@ -1,5 +1,5 @@
-import {useEffect, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
-import {Empty, Flex, message} from 'antd'
+import {useEffect, useRef, useState, type ChangeEvent} from 'react'
+import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
 import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
 import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
@@ -11,6 +11,7 @@ import {usePartsData} from './usePartsData.ts';
 import {usePartsTable} from './usePartsTable.tsx';
 import {PartsTable} from './PartsTable.tsx';
 import {usePartFormModal} from './usePartFormModal.ts';
+import {useCopyToClipboard} from './useCopyToClipboard.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -135,31 +136,7 @@ export const PartsPanel = ({
     })()
     const initialLoading = isLoading && !parts.length
 
-    const copyValue = async (value: string) => {
-        try {
-            if (navigator?.clipboard?.writeText) {
-                await navigator.clipboard.writeText(value)
-            } else {
-                const textArea = document.createElement('textarea')
-                textArea.value = value
-                document.body.appendChild(textArea)
-                textArea.select()
-                document.execCommand('copy')
-                document.body.removeChild(textArea)
-            }
-            message.success('Скопировано')
-        } catch {
-            message.error('Не удалось скопировать')
-        }
-    }
-
-    const handleCopy = (event: MouseEvent<HTMLElement>, value?: string | null) => {
-        event.stopPropagation()
-        if (!value) {
-            return
-        }
-        copyValue(value)
-    }
+    const { handleCopy } = useCopyToClipboard();
 
     const {columns} = usePartsTable({
         searchType,
