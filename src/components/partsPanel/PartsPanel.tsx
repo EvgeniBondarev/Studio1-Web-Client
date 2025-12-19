@@ -1,11 +1,5 @@
 import {useEffect, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
-import {useMutation, useQueryClient} from '@tanstack/react-query'
-import {Empty, Flex, message, Modal} from 'antd'
-import {
-    createPart,
-    deletePart,
-    updatePart
-} from '../../api/parts.ts'
+import {Empty, Flex, message} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
 import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
 import {PartFormModal} from '../partFormModal/PartFormModal.tsx';
@@ -16,6 +10,7 @@ import {usePartsFilter} from './usePartsFilter.tsx';
 import {usePartsData} from './usePartsData.ts';
 import {usePartsTable} from './usePartsTable.tsx';
 import {PartsTable} from './PartsTable.tsx';
+import {usePartFormModal} from './usePartFormModal.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -59,10 +54,7 @@ export const PartsPanel = ({
         onSearchTypeChange,
     })
 
-    const [isModalOpen, setModalOpen] = useState(false)
-    const [editingPart, setEditingPart] = useState<EtPart | null>(null)
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
-    const queryClient = useQueryClient()
 
     const normalizeValue = (value?: string | null) =>
         value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
@@ -178,87 +170,22 @@ export const PartsPanel = ({
         handleProducerFilter: onFocusProducer ? handleProducerFilter : undefined
     })
 
-    const closeModal = () => {
-        setModalOpen(false)
-        setEditingPart(null)
-    }
-
-    // Автоматическое открытие редактирования при получении autoEditPart
-    const processedAutoEditPartRef = useRef<EtPart | null | undefined>(undefined)
-    useEffect(() => {
-        // Открываем редактирование только если autoEditPart изменился и стал не null
-        if (autoEditPart && producer && processedAutoEditPartRef.current !== autoEditPart) {
-            setEditingPart(autoEditPart)
-            setModalOpen(true)
-            processedAutoEditPartRef.current = autoEditPart
-            // Уведомляем родительский компонент, что обработка завершена
-            onAutoEditProcessed?.()
-        } else if (!autoEditPart) {
-            processedAutoEditPartRef.current = undefined
-        }
-    }, [autoEditPart, producer, onAutoEditProcessed])
-
-    const createMutation = useMutation({
-        mutationFn: createPart,
-        onSuccess: () => {
-            message.success('Деталь добавлена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            closeModal()
-        },
-    })
-
-    const updateMutation = useMutation({
-        mutationFn: ({id, payload}: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
-        onSuccess: () => {
-            message.success('Деталь сохранена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            closeModal()
-        },
-    })
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => deletePart(id),
-        onSuccess: (_, id) => {
-            message.success('Деталь удалена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            if (selectedPart?.Id === id) {
-                onSelectPart(null)
-            }
-        },
-    })
-
-    const confirmDelete = (part: EtPart) => {
-        Modal.confirm({
-            title: 'Удалить деталь?',
-            content: `Вы уверены, что хотите удалить деталь ${part.Code ?? 'без кода'}?`,
-            okText: 'Удалить',
-            cancelText: 'Отмена',
-            okButtonProps: {danger: true, loading: deleteMutation.isPending},
-            onOk: () => deleteMutation.mutate(part.Id),
-        })
-    }
-
-    const handleSubmit = (values: Partial<EtPart>) => {
-        if (!producer) {
-            return
-        }
-
-        const payload = {...values, ProducerId: producer.Id}
-        if (editingPart) {
-            updateMutation.mutate({id: editingPart.Id, payload})
-        } else {
-            createMutation.mutate(payload)
-        }
-    }
+    const {
+        isModalOpen,
+        editingPart,
+        openModal,
+        closeModal,
+        handleSubmit,
+        confirmDelete,
+        isSubmitting,
+        modalMode,
+    } = usePartFormModal(producer, autoEditPart, onAutoEditProcessed,selectedPart, onSelectPart)
 
     // Создаем маппинг actions для каждой детали
     const partsActionsMap = usePartsActionsMap({
         filteredParts,
         onView: (part) => setPreviewPart(part),
-        onEdit: (part) => {
-            setEditingPart(part)
-            setModalOpen(true)
-        },
+        onEdit: (part) => {openModal(part)},
         onDelete: (part) => confirmDelete(part),
     })
 
@@ -268,7 +195,7 @@ export const PartsPanel = ({
     }
 
     const onAdd = () => {
-        setModalOpen(true)
+        openModal()
     }
     //-----для PartsSearch
     const onCodeFilterModeChange = (value: CodeFilterMode) => {
@@ -342,9 +269,9 @@ export const PartsPanel = ({
 
             <PartFormModal
                 open={isModalOpen}
-                mode={editingPart ? 'edit' : 'create'}
+                mode={modalMode}
                 initialValues={editingPart ?? {Rating: 0}}
-                loading={createMutation.isPending || updateMutation.isPending}
+                loading={ isSubmitting }
                 onCancel={closeModal}
                 onSubmit={handleSubmit}
                 brand={producer?.Name}
