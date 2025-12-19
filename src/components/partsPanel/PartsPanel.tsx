@@ -12,6 +12,7 @@ import {usePartsTable} from './usePartsTable.tsx';
 import {PartsTable} from './PartsTable.tsx';
 import {usePartFormModal} from './usePartFormModal.ts';
 import {useCopyToClipboard} from './useCopyToClipboard.ts';
+import {useCountLabel} from './useCountLabel.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -56,6 +57,7 @@ export const PartsPanel = ({
     })
 
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
+    const tableContainerRef = useRef<HTMLDivElement>(null)
 
     const normalizeValue = (value?: string | null) =>
         value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
@@ -63,6 +65,7 @@ export const PartsPanel = ({
     const trimmedSearch = search.trim()
     const rawSearchTerm = toLowerValue(trimmedSearch)
     const normalizedSearchTerm = normalizeValue(trimmedSearch)
+
 
     const {
         parts,
@@ -86,12 +89,29 @@ export const PartsPanel = ({
         rawSearchTerm,
     })
 
-    const tableContainerRef = useRef<HTMLDivElement>(null)
-    const hasProducer = Boolean(producer?.Id)
+    const {countLabel, resolvedTotalCount} = useCountLabel({
+        searchType,
+        trimmedSearch,
+        producer,
+        filteredParts,
+        parts,
+        totalParts,
+    });
 
-    useEffect(() => {
-        tableContainerRef.current?.scrollTo({top: 0})
-    }, [producer?.Id])
+    const initialLoading = isLoading && !parts.length
+
+    const {handleCopy} = useCopyToClipboard();
+
+    const {
+        isModalOpen,
+        editingPart,
+        openModal,
+        closeModal,
+        handleSubmit,
+        confirmDelete,
+        isSubmitting,
+        modalMode,
+    } = usePartFormModal(producer, autoEditPart, onAutoEditProcessed, selectedPart, onSelectPart)
 
     const handleProducerFilter = (producerId: number) => {
         if (!onFocusProducer) {
@@ -104,40 +124,6 @@ export const PartsPanel = ({
         }
     }
 
-    const resolvedTotalCount = totalParts ?? (hasProducer ? parts.length : undefined)
-
-    // Для режима "without_producer" показываем общее количество и количество на странице
-    const countLabel = (() => {
-        if (searchType === 'without_producer') {
-            if (!search?.trim()) {
-                return '—'
-            }
-            // Для режима "without_producer" filteredParts = parts (фильтрация на сервере)
-            // parts.length - количество на текущей странице (все загруженные страницы)
-            const currentPageCount = parts.length
-            const total = resolvedTotalCount !== undefined ? resolvedTotalCount : '...'
-            return `${currentPageCount.toLocaleString('ru-RU')} / ${typeof total === 'number' ? total.toLocaleString('ru-RU') : total}`
-        }
-
-        // Для режима "by_producer"
-        if (!producer) {
-            return '—'
-        }
-
-        if (trimmedSearch) {
-            // При поиске показываем отфильтрованные / общее
-            return `${filteredParts.length.toLocaleString('ru-RU')} / ${
-                resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
-            }`
-        }
-
-        // Без поиска показываем только общее количество
-        return resolvedTotalCount !== undefined ? resolvedTotalCount.toLocaleString('ru-RU') : '...'
-    })()
-    const initialLoading = isLoading && !parts.length
-
-    const { handleCopy } = useCopyToClipboard();
-
     const {columns} = usePartsTable({
         searchType,
         producersMap,
@@ -147,34 +133,20 @@ export const PartsPanel = ({
         handleProducerFilter: onFocusProducer ? handleProducerFilter : undefined
     })
 
-    const {
-        isModalOpen,
-        editingPart,
-        openModal,
-        closeModal,
-        handleSubmit,
-        confirmDelete,
-        isSubmitting,
-        modalMode,
-    } = usePartFormModal(producer, autoEditPart, onAutoEditProcessed,selectedPart, onSelectPart)
-
     // Создаем маппинг actions для каждой детали
     const partsActionsMap = usePartsActionsMap({
         filteredParts,
         onView: (part) => setPreviewPart(part),
-        onEdit: (part) => {openModal(part)},
+        onEdit: (part) => {
+            openModal(part)
+        },
         onDelete: (part) => confirmDelete(part),
     })
 
-    //--------для PartsHeader
     const handleReload = () => {
         refetchParts()
     }
 
-    const onAdd = () => {
-        openModal()
-    }
-    //-----для PartsSearch
     const onCodeFilterModeChange = (value: CodeFilterMode) => {
         setCodeFilterMode(value)
         // Не сбрасываем поиск, пересчет произойдет автоматически через useMemo
@@ -196,6 +168,10 @@ export const PartsPanel = ({
         setSearchInput(value.trim())
     }
 
+    useEffect(() => {
+        tableContainerRef.current?.scrollTo({top: 0})
+    }, [producer?.Id])
+
     return (
 
         <Flex vertical gap={8} style={{height: '100%'}} className="panel">
@@ -203,7 +179,7 @@ export const PartsPanel = ({
                          countLabel={countLabel}
                          isFetching={isFetching}
                          onReload={handleReload}
-                         onAdd={onAdd}
+                         onAdd={() => openModal()}
                          producer={producer}
             />
             <PartsSearch searchType={searchType}
@@ -248,7 +224,7 @@ export const PartsPanel = ({
                 open={isModalOpen}
                 mode={modalMode}
                 initialValues={editingPart ?? {Rating: 0}}
-                loading={ isSubmitting }
+                loading={isSubmitting}
                 onCancel={closeModal}
                 onSubmit={handleSubmit}
                 brand={producer?.Name}
