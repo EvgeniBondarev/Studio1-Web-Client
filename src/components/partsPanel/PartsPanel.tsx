@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState, type MouseEvent, type ChangeEvent} from 'react'
 import {useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient} from '@tanstack/react-query'
-import { Empty, Flex,message, Modal, Spin, Table, Typography} from 'antd'
+import {Empty, Flex, message, Modal, Spin, Table, Typography} from 'antd'
 import type {ColumnsType} from 'antd/es/table'
 import type {SortOrder} from 'antd/es/table/interface'
 import {
@@ -20,31 +20,11 @@ import {PartsHeader} from './PartsHeader.tsx';
 import {PartsSearch} from './PartsSearch.tsx';
 import {type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx';
 import {usePartsActionsMap} from './usePartsActionsMap.tsx';
+import {usePartsFilter} from './usePartsFilter.tsx';
 
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
-
-const PARTS_FILTER_SESSION_KEY = 'partsPanelFilters'
-
-interface PartsFilterSettings {
-    searchInput: string
-    search: string
-    searchType: SearchType
-    codeFilterMode: CodeFilterMode
-}
-
-const loadPartsFilterSettings = (): PartsFilterSettings | null => {
-    if (typeof window === 'undefined') {
-        return null
-    }
-    try {
-        const raw = window.sessionStorage.getItem(PARTS_FILTER_SESSION_KEY)
-        return raw ? (JSON.parse(raw) as PartsFilterSettings) : null
-    } catch {
-        return null
-    }
-}
 
 interface PartsPanelProps {
     producer?: EtProducer | null
@@ -69,31 +49,22 @@ export const PartsPanel = ({
                                initialSearch,
                                initialSearchType,
                            }: PartsPanelProps) => {
-    const savedFilters = loadPartsFilterSettings()
-    const [searchInput, setSearchInput] = useState(() => initialSearch ?? savedFilters?.searchInput ?? '')
-    const [search, setSearch] = useState(() => initialSearch ?? savedFilters?.search ?? '')
-    const [searchType, setSearchType] = useState<SearchType>(() => initialSearchType ?? savedFilters?.searchType ?? 'by_producer')
 
-    // Синхронизация с initialSearch и initialSearchType (только при первом рендере или изменении)
-    const initialSearchProcessedRef = useRef(false)
-    const initialSearchTypeProcessedRef = useRef(false)
+    const {
+        searchInput,
+        search,
+        searchType,
+        codeFilterMode,
+        setSearchInput,
+        setSearch,
+        setCodeFilterMode,
+        handleSearchTypeChange,
+    } = usePartsFilter({
+        initialSearch,
+        initialSearchType,
+        onSearchTypeChange,
+    })
 
-    useEffect(() => {
-        if (initialSearch !== undefined && !initialSearchProcessedRef.current) {
-            setSearchInput(initialSearch)
-            setSearch(initialSearch)
-            initialSearchProcessedRef.current = true
-        }
-    }, [initialSearch])
-
-    useEffect(() => {
-        if (initialSearchType !== undefined && !initialSearchTypeProcessedRef.current) {
-            setSearchType(initialSearchType)
-            onSearchTypeChange?.(initialSearchType)
-            initialSearchTypeProcessedRef.current = true
-        }
-    }, [initialSearchType, onSearchTypeChange])
-    const [codeFilterMode, setCodeFilterMode] = useState<CodeFilterMode>(() => savedFilters?.codeFilterMode ?? 'startsWith')
     const [isModalOpen, setModalOpen] = useState(false)
     const [editingPart, setEditingPart] = useState<EtPart | null>(null)
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
@@ -147,34 +118,6 @@ export const PartsPanel = ({
         tableContainerRef.current?.scrollTo({top: 0})
     }, [producer?.Id])
 
-    // Динамический поиск при вводе для обоих режимов с debounce
-    useEffect(() => {
-        // Для режима "without_producer" добавляем debounce, чтобы не делать запрос при каждом символе
-        if (searchType === 'without_producer') {
-            const timer = setTimeout(() => {
-                setSearch(searchInput.trim())
-            }, 500) // Задержка 500мс
-
-            return () => clearTimeout(timer)
-        } else if (searchType === 'by_producer') {
-            // Для режима "by_producer" поиск происходит сразу (фильтрация на клиенте)
-            setSearch(searchInput.trim())
-        }
-    }, [searchInput, searchType])
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return
-        }
-        const payload: PartsFilterSettings = {
-            searchInput,
-            search,
-            searchType,
-            codeFilterMode,
-        }
-        window.sessionStorage.setItem(PARTS_FILTER_SESSION_KEY, JSON.stringify(payload))
-    }, [searchInput, search, searchType, codeFilterMode])
-
     // Автоматическая загрузка при прокрутке
     useEffect(() => {
         if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
@@ -201,9 +144,6 @@ export const PartsPanel = ({
         }
     }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-    useEffect(() => {
-        onSearchTypeChange?.(searchType)
-    }, [searchType, onSearchTypeChange])
     const normalizeValue = (value?: string | null) =>
         value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
     const toLowerValue = (value?: string | null) => (value ? value.toLowerCase() : '')
@@ -753,12 +693,12 @@ export const PartsPanel = ({
         setModalOpen(true)
     }
     //-----для PartsSearch
-      const onCodeFilterModeChange=(value:CodeFilterMode)=>{
+    const onCodeFilterModeChange = (value: CodeFilterMode) => {
         setCodeFilterMode(value)
         // Не сбрасываем поиск, пересчет произойдет автоматически через useMemo
     }
 
-    const onSearchInputChange=(event:ChangeEvent<HTMLInputElement>)=>{
+    const onSearchInputChange = (event: ChangeEvent<HTMLInputElement>) => {
         const {value} = event.target
         setSearchInput(value)
         // Поиск происходит динамически через useEffect для обоих режимов
@@ -768,19 +708,11 @@ export const PartsPanel = ({
         }
     }
 
-    const onSearch=(value:string)=>{
+    const onSearch = (value: string) => {
         // При нажатии Enter или кнопки поиска сразу применяем фильтр
         setSearch(value.trim())
         setSearchInput(value.trim())
     }
-
-    const onSearchSelectTypeChange=(value:SearchType)=>{
-        setSearchType(value)
-        setSearch('')
-        setSearchInput('')
-    }
-
-
 
     return (
 
@@ -795,9 +727,9 @@ export const PartsPanel = ({
             <PartsSearch searchType={searchType}
                          codeFilterMode={codeFilterMode}
                          searchInput={searchInput}
-                         onSearchInputChange={(event)=>onSearchInputChange(event)}
-                         onSearch={(value)=>onSearch(value)}
-                         onSearchSelectTypeChange={(value)=>onSearchSelectTypeChange(value)}
+                         onSearchInputChange={(event) => onSearchInputChange(event)}
+                         onSearch={(value) => onSearch(value)}
+                         onSearchSelectTypeChange={(value) => handleSearchTypeChange(value)}
                          onCodeFilterModeChange={onCodeFilterModeChange}
                          producer={producer}
             />
@@ -809,10 +741,10 @@ export const PartsPanel = ({
 
             {contextMenu && (
                 <PartsContextMenu
-                        actions={partsActionsMap.get(contextMenu.partId) || []}
-                        position={contextMenu}
-                        onClose={()=>setContextMenu(null)}
-                    />
+                    actions={partsActionsMap.get(contextMenu.partId) || []}
+                    position={contextMenu}
+                    onClose={() => setContextMenu(null)}
+                />
             )}
 
             <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
