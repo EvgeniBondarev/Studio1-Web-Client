@@ -13,6 +13,7 @@ import {PartsTable} from './components/PartsTable.tsx';
 import {usePartFormModal} from './hooks/usePartFormModal.ts';
 import {useCopyToClipboard} from './hooks/useCopyToClipboard.ts';
 import {useCountLabel} from './hooks/useCountLabel.ts';
+import {useSearchNormalization} from './hooks/useSearchNormalization.ts';
 
 export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
@@ -59,13 +60,8 @@ export const PartsPanel = ({
     const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
     const tableContainerRef = useRef<HTMLDivElement>(null)
 
-    const normalizeValue = (value?: string | null) =>
-        value ? value.replace(/[^a-z0-9]/gi, '').toLowerCase() : ''
-    const toLowerValue = (value?: string | null) => (value ? value.toLowerCase() : '')
-    const trimmedSearch = search.trim()
-    const rawSearchTerm = toLowerValue(trimmedSearch)
-    const normalizedSearchTerm = normalizeValue(trimmedSearch)
-
+    const { processSearchTerm } = useSearchNormalization()
+    const { trimmedSearch, rawSearchTerm, normalizedSearchTerm } = processSearchTerm(search)
 
     const {
         parts,
