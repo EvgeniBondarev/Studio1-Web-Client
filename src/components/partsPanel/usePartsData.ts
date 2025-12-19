@@ -196,6 +196,5 @@ export const usePartsData = ({
         // Функции
         fetchNextPage,
         refetchParts,
-        getStringValue,
     };
 };
