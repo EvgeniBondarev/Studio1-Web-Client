@@ -13,9 +13,9 @@ import type { EtProducer } from '../api/types.ts'
 import { EntityFormModal } from './EntityFormModal.tsx'
 import { producerFields } from '../config/resources.ts'
 import { ContextActionsMenu } from './ContextActionsMenu.tsx'
-import { ProducerDetailsDrawer } from './ProducerDetailsDrawer.tsx'
 import { fetchProducerById } from '../api/producers.ts'
 import { fetchPartsCount } from '../api/parts.ts'
+import {ProducerDetailsModal} from './producerDetailsModal';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
@@ -530,7 +530,7 @@ export const ProducerPanel = ({
 
       <div className="panel-body">{renderList()}</div>
 
-      <ProducerDetailsDrawer
+      <ProducerDetailsModal
         producer={previewProducer}
         onClose={() => setPreviewProducer(null)}
         onSelectProducer={async (producerId) => {

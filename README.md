@@ -625,7 +625,7 @@ const filter = `Name eq '${escaped}'`
 - **Контекстное меню** - Правый клик для быстрого доступа к действиям
 - **Интеграция с PartDetailsDrawer** - Открытие карточки детали
 
-### `ProducerDetailsDrawer.tsx` - Карточка производителя
+### `ProducerDetailsModal.tsx` - Карточка производителя
 
 Компонент для отображения детальной информации о производителе в боковой панели.
 
@@ -832,7 +832,7 @@ client/
 │   │   ├── LoginPage.tsx     # Страница входа
 │   │   ├── ProducerPanel.tsx # Панель производителей
 │   │   ├── PartsPanel.tsx    # Панель деталей
-│   │   ├── ProducerDetailsDrawer.tsx # Карточка производителя
+│   │   ├── ProducerDetailsModal.tsx # Карточка производителя
 │   │   ├── PartDetailsDrawer.tsx     # Карточка детали
 │   │   ├── EntityFormModal.tsx       # Универсальная форма
 │   │   ├── PartFormModal.tsx         # Форма детали

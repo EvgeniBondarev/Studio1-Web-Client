@@ -63,7 +63,7 @@ export const PartsContextMenu = ({
             onClose()
         },
         danger: action.danger,
-    })))
+    })), [actions, onClose])
 
     return (
         <Dropdown
