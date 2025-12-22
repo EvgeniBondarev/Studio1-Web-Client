@@ -21,12 +21,18 @@ export const interpartsFetch = async <T>(
     return response.json() as Promise<T>
 }
 
-export const fetchImagesByBrandArticle = (
-    items: ImageRequestItem[],
-): Promise<ImageResponseItem[]> => {
-    return interpartsFetch<ImageResponseItem[]>('/s3/multifinderbrands', {
-        method: 'POST',
-        body: JSON.stringify(items),
-    })
+export const fetchImageUrlByProducerId = (
+    params: ImageRequestItem
+): Promise<ImageResponseItem> => {
 
+    const queryParams = new URLSearchParams({
+        code: params.code,
+        producer_id: params.producerId
+    });
+
+    const path = `/s3/image-url-by-producer-id?${queryParams.toString()}`;
+
+    return interpartsFetch<ImageResponseItem>(path, {
+        method: 'GET',
+    });
 }
