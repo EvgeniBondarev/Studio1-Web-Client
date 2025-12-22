@@ -387,18 +387,12 @@ const App = () => {
               producer={selectedProducer}
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
-                onFocusProducer={(producer) => {
-                  setProducerSearch(
-                    producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '',
-                  )
-                  setSelectedProducer(producer)
-                }}
-                onSearchTypeChange={handleSearchTypeChange}
-                onProducerIdsChange={handleProducerIdsChange}
-                autoEditPart={autoEditPart}
-                onAutoEditProcessed={() => setAutoEditPart(null)}
-                initialSearch={initialPartsSearch}
-                initialSearchType={initialPartsSearchType}
+              onSearchTypeChange={handleSearchTypeChange}
+              onProducerIdsChange={handleProducerIdsChange}
+              autoEditPart={autoEditPart}
+              onAutoEditProcessed={() => setAutoEditPart(null)}
+              initialSearch={initialPartsSearch}
+              initialSearchType={initialPartsSearchType}
             />
           </Content>
           </Layout>
