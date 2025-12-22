@@ -2,17 +2,14 @@ import {type MouseEvent} from 'react'
 import type {ColumnsType} from 'antd/es/table'
 import {Typography, Spin} from 'antd'
 import type {EtPart} from '../../../api/types.ts'
-import type {SearchType} from '../PartsPanel.tsx';
 
 interface UsePartsTableProps {
-    searchType: SearchType
     stringsMap: Record<number, string>
     isStringsFetching: boolean
     handleCopy: (event: MouseEvent<HTMLElement>, value?: string | null) => void
 }
 
 export const usePartsTable = ({
-                                  searchType,
                                   stringsMap,
                                   isStringsFetching,
                                   handleCopy,

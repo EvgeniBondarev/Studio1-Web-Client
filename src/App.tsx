@@ -370,23 +370,17 @@ const App = () => {
               producer={selectedProducer}
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
-                onFocusProducer={(producer) => {
-                  setProducerSearch(
-                    producer.Name ?? producer.MarketPrefix ?? producer.Prefix ?? '',
-                  )
-                  setSelectedProducer(producer)
-                }}
-                onSearchTypeChange={useCallback((type) => {
+                onSearchTypeChange={useCallback((type: 'by_producer' | 'without_producer') => {
                   setPartsSearchType(type)
                   if (type === 'by_producer') {
                     setPartsProducerIds([])
                   }
                 }, [])}
-                onProducerIdsChange={useCallback((ids) => {
+                onProducerIdsChange={useCallback((ids: number[]) => {
                   setPartsProducerIds((prev) => {
                     // Сравниваем массивы, чтобы избежать лишних обновлений
                     if (ids.length !== prev.length || 
-                        ids.some((id, index) => id !== prev[index])) {
+                        ids.some((id: number, index: number) => id !== prev[index])) {
                       return ids
                     }
                     return prev

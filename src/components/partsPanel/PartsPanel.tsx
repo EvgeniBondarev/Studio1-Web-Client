@@ -22,7 +22,6 @@ interface PartsPanelProps {
     producer?: EtProducer | null
     onSelectPart: (part: EtPart | null) => void
     selectedPart?: EtPart | null
-    onFocusProducer?: (producer: EtProducer) => void
     onSearchTypeChange?: (type: SearchType) => void
     onProducerIdsChange?: (producerIds: number[]) => void
     autoEditPart?: EtPart | null
@@ -35,7 +34,6 @@ export const PartsPanel = ({
                                producer,
                                onSelectPart,
                                selectedPart,
-                               onFocusProducer,
                                onSearchTypeChange,
                                onProducerIdsChange,
                                autoEditPart,
@@ -69,7 +67,6 @@ export const PartsPanel = ({
         parts,
         filteredParts,
         totalParts,
-        producersMap,
         stringsMap,
         isLoading,
         isFetching,
@@ -112,7 +109,6 @@ export const PartsPanel = ({
     } = usePartFormModal(producer, autoEditPart, onAutoEditProcessed, selectedPart, onSelectPart)
 
     const {columns} = usePartsTable({
-        searchType,
         stringsMap,
         isStringsFetching,
         handleCopy,
