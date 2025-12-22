@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Layout, Dropdown, Button, Menu, ConfigProvider, theme } from 'antd'
+import { useCallback, useEffect, useState } from 'react'
+import { App as AntdApp, Layout, Dropdown, Button, Menu, ConfigProvider, theme } from 'antd'
 import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, SettingOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import type { EtPart, EtProducer, CtUser } from './api/types.ts'
 import { ProducerPanel } from './components/ProducerPanel.tsx'
-import { PartsPanel } from './components/PartsPanel.tsx'
+import { PartsPanel } from './components/partsPanel'
 import { PartDetailsDrawer } from './components/PartDetailsDrawer.tsx'
 import { LoginPage } from './components/LoginPage.tsx'
 import { UserProfileModal } from './components/UserProfileModal.tsx'
@@ -56,6 +56,7 @@ const App = () => {
   const [autoEditPart, setAutoEditPart] = useState<EtPart | null>(null)
   const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
   const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
+  const [partsProducerIds, setPartsProducerIds] = useState<number[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -287,13 +288,16 @@ const App = () => {
   if (!currentUser) {
     return (
       <ConfigProvider theme={antdTheme}>
-        <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode} />
+        <AntdApp>
+          <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode} />
+        </AntdApp>
       </ConfigProvider>
     )
   }
 
   return (
     <ConfigProvider theme={antdTheme}>
+      <AntdApp>
       <Layout className="app-layout">
         <Sider
           width={200}
@@ -352,6 +356,7 @@ const App = () => {
                 externalSearch={producerSearch}
                 onSearchChange={setProducerSearch}
                 searchType={partsSearchType}
+                filterProducerIds={partsSearchType === 'without_producer' ? partsProducerIds : undefined}
             />
           </div>
             <div
@@ -371,7 +376,22 @@ const App = () => {
                   )
                   setSelectedProducer(producer)
                 }}
-                onSearchTypeChange={setPartsSearchType}
+                onSearchTypeChange={useCallback((type) => {
+                  setPartsSearchType(type)
+                  if (type === 'by_producer') {
+                    setPartsProducerIds([])
+                  }
+                }, [])}
+                onProducerIdsChange={useCallback((ids) => {
+                  setPartsProducerIds((prev) => {
+                    // Сравниваем массивы, чтобы избежать лишних обновлений
+                    if (ids.length !== prev.length || 
+                        ids.some((id, index) => id !== prev[index])) {
+                      return ids
+                    }
+                    return prev
+                  })
+                }, [])}
                 autoEditPart={autoEditPart}
                 onAutoEditProcessed={() => setAutoEditPart(null)}
                 initialSearch={initialPartsSearch}
@@ -388,6 +408,7 @@ const App = () => {
         open={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
       />
+      </AntdApp>
     </ConfigProvider>
   )
 }

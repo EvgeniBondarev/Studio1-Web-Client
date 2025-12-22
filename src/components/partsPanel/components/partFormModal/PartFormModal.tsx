@@ -2,15 +2,16 @@ import {useEffect, useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {Col, Form, Input, Modal, Row, Tabs} from 'antd'
 import dayjs from 'dayjs'
-import type {EtPart} from '../../api/types.ts'
-import {fetchSessionById} from '../../api/sessions.ts'
-import {fetchStringById} from '../../api/parts.ts';
-import {fetchProductByBrandAndArticle} from '../../api/partByBrandArticle.ts';
+import type {EtPart} from '../../../../api/types.ts'
+import {fetchSessionById} from '../../../../api/sessions.ts'
+import {fetchStringById} from '../../../../api/parts.ts';
+import {fetchProductByBrandAndArticle} from '../../../../api/partByBrandArticle.ts';
 import {DataTab} from './dataTab/DataTab.tsx';
-import {DetailsTab} from './detailsTab/DetailsTab.tsx';
-import {ImagesTab} from './imagesTab/ImagesTab.tsx';
+
+import {ImagesTab} from './imageTab/ImagesTab.tsx';
 import {LeftCol} from './formColumns/LeftCol.tsx';
 import {RightCol} from './formColumns/RightCol.tsx';
+import {DetailsTab} from './detailsTab/DetailsTab.tsx';
 
 interface PartFormModalProps {
     open: boolean
@@ -139,13 +140,15 @@ export const PartFormModal = ({
                     minHeight: 300, overflowY: 'auto',
                     overflowX: 'hidden', marginBottom: '20px'
                 }}>
-                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
-                        {tabsConfig.map(tab => (
-                            <Tabs.TabPane tab={tab.label} key={tab.key}>
-                                {tab.content}
-                            </Tabs.TabPane>
-                        ))}
-                    </Tabs>
+                    <Tabs 
+                        activeKey={activeTab} 
+                        onChange={setActiveTab}
+                        items={tabsConfig.map(tab => ({
+                            key: tab.key,
+                            label: tab.label,
+                            children: tab.content,
+                        }))}
+                    />
                 </div>
             </Form>
         </Modal>

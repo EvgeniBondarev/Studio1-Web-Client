@@ -1,5 +1,5 @@
 import {Tag} from 'antd';
-import type {ProductVendorCategory} from '../../../../api/types.ts';
+import type {ProductVendorCategory} from '../../../../../../api/types.ts';
 
 type Props = {
     categories: ProductVendorCategory[]

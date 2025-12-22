@@ -46,7 +46,7 @@ export const PartDetailsDrawer = ({ producer, part, onClose }: PartDetailsDrawer
       destroyOnHidden
     >
       {part ? (
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           <div>
             <Typography.Text type="secondary">Производитель</Typography.Text>
             <Typography.Title level={5} style={{ marginTop: 4 }}>
