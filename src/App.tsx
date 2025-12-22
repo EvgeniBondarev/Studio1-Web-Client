@@ -4,7 +4,7 @@ import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, Set
 import type { MenuProps } from 'antd'
 import type { EtPart, EtProducer, CtUser } from './api/types.ts'
 import { ProducerPanel } from './components/ProducerPanel.tsx'
-import { PartsPanel } from './components/partsPanel'
+import {PartsPanel, type SearchType} from './components/partsPanel'
 import { PartDetailsDrawer } from './components/PartDetailsDrawer.tsx'
 import { LoginPage } from './components/LoginPage.tsx'
 import { UserProfileModal } from './components/UserProfileModal.tsx'
@@ -173,6 +173,23 @@ const App = () => {
       setUrlParamsProcessed(true)
     }
   }, [currentUser, urlParamsProcessed])
+
+  const handleSearchTypeChange = useCallback((type: SearchType) => {
+    setPartsSearchType(type)
+    if (type === 'by_producer') {
+      setPartsProducerIds([])
+    }
+  }, [])
+
+  const handleProducerIdsChange = useCallback((ids: number[]) => {
+    setPartsProducerIds((prev) => {
+      if (ids.length !== prev.length ||
+          ids.some((id, index) => id !== prev[index])) {
+        return ids
+      }
+      return prev
+    })
+  }, [])
 
   const handleLogin = (user: CtUser) => {
     setCurrentUser(user)
@@ -376,22 +393,8 @@ const App = () => {
                   )
                   setSelectedProducer(producer)
                 }}
-                onSearchTypeChange={useCallback((type) => {
-                  setPartsSearchType(type)
-                  if (type === 'by_producer') {
-                    setPartsProducerIds([])
-                  }
-                }, [])}
-                onProducerIdsChange={useCallback((ids) => {
-                  setPartsProducerIds((prev) => {
-                    // Сравниваем массивы, чтобы избежать лишних обновлений
-                    if (ids.length !== prev.length || 
-                        ids.some((id, index) => id !== prev[index])) {
-                      return ids
-                    }
-                    return prev
-                  })
-                }, [])}
+                onSearchTypeChange={handleSearchTypeChange}
+                onProducerIdsChange={handleProducerIdsChange}
                 autoEditPart={autoEditPart}
                 onAutoEditProcessed={() => setAutoEditPart(null)}
                 initialSearch={initialPartsSearch}

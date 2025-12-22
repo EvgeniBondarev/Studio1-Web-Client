@@ -12,7 +12,6 @@ interface UsePartsTableProps {
 }
 
 export const usePartsTable = ({
-                                  searchType,
                                   stringsMap,
                                   isStringsFetching,
                                   handleCopy,

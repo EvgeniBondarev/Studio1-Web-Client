@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
-import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 import { Button, Empty, Flex, Input, message, Modal, Select, Space, Spin, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import {
@@ -133,7 +133,7 @@ export const ProducerPanel = ({
 
   const missingProducers = useMemo(() => {
     const producers: EtProducer[] = []
-    missingProducersQueries.forEach((query, index) => {
+    missingProducersQueries.forEach((query) => {
       if (query.data) {
         producers.push(query.data)
       }
