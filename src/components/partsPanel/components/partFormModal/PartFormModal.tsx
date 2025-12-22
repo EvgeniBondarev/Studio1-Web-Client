@@ -104,7 +104,10 @@ export const PartFormModal = ({
         {
             key: 'images',
             label: 'Изображение',
-            content: <ImagesTab images={PRdata?.Images} isLoading={isLoading}/>
+            content: <ImagesTab prImages={PRdata?.Images}
+                                prIsLoading={isLoading}
+                                code={initialValues?.Code ?? ''}
+                                producerId={initialValues?.ProducerId?.toString() ?? ''}/>
         },
         {
             key: 'pr_data',

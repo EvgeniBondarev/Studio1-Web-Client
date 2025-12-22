@@ -1,9 +1,8 @@
 export interface ImageRequestItem {
-    brand: string
-    article: string
-    isPreview?: boolean
+    producerId: string
+    code: string
 }
 
 export interface ImageResponseItem {
-    url: string
+    url: string[]
 }
