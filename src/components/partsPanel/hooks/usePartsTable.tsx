@@ -1,26 +1,21 @@
 import {type MouseEvent} from 'react'
 import type {ColumnsType} from 'antd/es/table'
 import {Typography, Spin} from 'antd'
-import type {EtPart, EtProducer} from '../../../api/types.ts'
-import type {SortOrder} from 'antd/es/table/interface';
+import type {EtPart} from '../../../api/types.ts'
 import type {SearchType} from '../PartsPanel.tsx';
 
 interface UsePartsTableProps {
     searchType: SearchType
-    producersMap: Map<number, EtProducer>
     stringsMap: Record<number, string>
     isStringsFetching: boolean
     handleCopy: (event: MouseEvent<HTMLElement>, value?: string | null) => void
-    handleProducerFilter?: (producerId: number) => void
 }
 
 export const usePartsTable = ({
                                   searchType,
-                                  producersMap,
                                   stringsMap,
                                   isStringsFetching,
                                   handleCopy,
-                                  handleProducerFilter
                               }: UsePartsTableProps) => {
     // Функция для обрезки текста до 65 символов
     const truncateText = (text: string): string => {
@@ -110,58 +105,12 @@ export const usePartsTable = ({
                 )
             },
         },
-        ...(searchType === 'without_producer'
-            ? [
-                {
-                    title: 'Производитель',
-                    dataIndex: 'ProducerId',
-                    sorter: {
-                        compare: (a: EtPart, b: EtPart) => {
-                            const producerA = producersMap.get(a.ProducerId)
-                            const producerB = producersMap.get(b.ProducerId)
-                            return compareStrings(
-                                producerA?.Name ?? producerA?.Prefix ?? '',
-                                producerB?.Name ?? producerB?.Prefix ?? ''
-                            )
-                        },
-                        multiple: 5,
-                    },
-                    sortDirections: ['ascend', 'descend'] as SortOrder[],
-                    render: (_: unknown, record: EtPart) => {
-                        const producer = producersMap.get(record.ProducerId)
-                        if (!producer) return <Spin size="small"/>
-
-                        const label = producer.Name ?? producer.Prefix ?? '—'
-                        const truncated = truncateText(label)
-                        return (
-                            <Typography.Link
-                                title={label}
-                                style={{
-                                    fontSize: 12,
-                                    maxWidth: '100%',
-                                    display: 'block',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                }}
-                                onClick={(event) => {
-                                    event.stopPropagation()
-                                    handleProducerFilter?.(record.ProducerId)
-                                }}
-                            >
-                                {truncated}
-                            </Typography.Link>
-                        )
-                    },
-                },
-            ]
-            : []),
         {
             title: 'Лп. код',
             dataIndex: 'LongCode',
             sorter: {
                 compare: (a, b) => compareStrings(a.LongCode, b.LongCode),
-                multiple: searchType === 'without_producer' ? 4 : 4,
+                multiple: 5,
             },
             sortDirections: ['ascend', 'descend'],
             render: (value?: string) => {
@@ -190,7 +139,7 @@ export const usePartsTable = ({
             dataIndex: 'Name',
             sorter: {
                 compare: (a, b) => compareStringIds(a.Name, b.Name),
-                multiple: searchType === 'without_producer' ? 3 : 3,
+                multiple: 4,
             },
             sortDirections: ['ascend', 'descend'],
             render: (_, record) => renderStringValue(record.Name),
@@ -200,7 +149,7 @@ export const usePartsTable = ({
             dataIndex: 'Description',
             sorter: {
                 compare: (a, b) => compareStringIds(a.Description, b.Description),
-                multiple: searchType === 'without_producer' ? 2 : 2,
+                multiple: 3,
             },
             sortDirections: ['ascend', 'descend'],
             render: (_, record) => renderStringValue(record.Description),
@@ -210,7 +159,7 @@ export const usePartsTable = ({
             dataIndex: 'Weight',
             sorter: {
                 compare: (a, b) => compareNumbers(a.Weight, b.Weight),
-                multiple: searchType === 'without_producer' ? 1 : 1,
+                multiple: 1,
             },
             sortDirections: ['ascend', 'descend'],
             render: (value?: number) => (value ? `${value.toFixed(2)}` : '—'),

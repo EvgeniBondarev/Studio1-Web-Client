@@ -140,13 +140,15 @@ export const PartFormModal = ({
                     minHeight: 300, overflowY: 'auto',
                     overflowX: 'hidden', marginBottom: '20px'
                 }}>
-                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
-                        {tabsConfig.map(tab => (
-                            <Tabs.TabPane tab={tab.label} key={tab.key}>
-                                {tab.content}
-                            </Tabs.TabPane>
-                        ))}
-                    </Tabs>
+                    <Tabs 
+                        activeKey={activeTab} 
+                        onChange={setActiveTab}
+                        items={tabsConfig.map(tab => ({
+                            key: tab.key,
+                            label: tab.label,
+                            children: tab.content,
+                        }))}
+                    />
                 </div>
             </Form>
         </Modal>

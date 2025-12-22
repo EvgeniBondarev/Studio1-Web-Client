@@ -139,8 +139,28 @@ export const usePartsData = ({
     // Фильтрация частей
     const filteredParts = useMemo(() => {
         // Если поиск без производителя, фильтрация уже выполнена на сервере
+        // Сортируем по рейтингу детали (Rating), затем по рейтингу производителя от большего к меньшему
         if (searchType === 'without_producer') {
-            return parts;
+            return [...parts].sort((a, b) => {
+                // Сначала сортируем по рейтингу детали
+                const partRatingA = a.Rating ?? -1;
+                const partRatingB = b.Rating ?? -1;
+                
+                if (partRatingA !== partRatingB) {
+                    // Сортируем по убыванию рейтинга детали (от большего к меньшему)
+                    return partRatingB - partRatingA;
+                }
+                
+                // Если рейтинги деталей равны, сортируем по рейтингу производителя
+                const producerA = producersMap.get(a.ProducerId);
+                const producerB = producersMap.get(b.ProducerId);
+                
+                const producerRatingA = producerA?.Rating ?? -1;
+                const producerRatingB = producerB?.Rating ?? -1;
+                
+                // Сортируем по убыванию рейтинга производителя (от большего к меньшему)
+                return producerRatingB - producerRatingA;
+            });
         }
 
         // Для поиска по производителю Code уже отфильтрован на сервере
@@ -176,7 +196,7 @@ export const usePartsData = ({
 
             return normalizedCandidates.some((candidate) => candidate.includes(normalizedSearchTerm));
         });
-    }, [parts, rawSearchTerm, normalizedSearchTerm, searchType]);
+    }, [parts, rawSearchTerm, normalizedSearchTerm, searchType, producersMap]);
 
     return {
         // Данные

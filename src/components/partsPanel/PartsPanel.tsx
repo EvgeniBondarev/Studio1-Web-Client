@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type ChangeEvent} from 'react'
+import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
 import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
@@ -24,6 +24,7 @@ interface PartsPanelProps {
     selectedPart?: EtPart | null
     onFocusProducer?: (producer: EtProducer) => void
     onSearchTypeChange?: (type: SearchType) => void
+    onProducerIdsChange?: (producerIds: number[]) => void
     autoEditPart?: EtPart | null
     onAutoEditProcessed?: () => void
     initialSearch?: string
@@ -36,6 +37,7 @@ export const PartsPanel = ({
                                selectedPart,
                                onFocusProducer,
                                onSearchTypeChange,
+                               onProducerIdsChange,
                                autoEditPart,
                                onAutoEditProcessed,
                                initialSearch,
@@ -109,24 +111,11 @@ export const PartsPanel = ({
         modalMode,
     } = usePartFormModal(producer, autoEditPart, onAutoEditProcessed, selectedPart, onSelectPart)
 
-    const handleProducerFilter = (producerId: number) => {
-        if (!onFocusProducer) {
-            return
-        }
-
-        const producerFromMap = producersMap.get(producerId)
-        if (producerFromMap) {
-            onFocusProducer(producerFromMap)
-        }
-    }
-
     const {columns} = usePartsTable({
         searchType,
-        producersMap,
         stringsMap,
         isStringsFetching,
         handleCopy,
-        handleProducerFilter: onFocusProducer ? handleProducerFilter : undefined
     })
 
     // Создаем маппинг actions для каждой детали
@@ -163,6 +152,31 @@ export const PartsPanel = ({
         setSearch(value.trim())
         setSearchInput(value.trim())
     }
+
+    // Извлекаем ProducerId из найденных деталей при поиске без производителя
+    const producerIdsFromParts = useMemo(() => {
+        if (searchType === 'without_producer' && parts.length > 0) {
+            const ids = Array.from(
+                new Set(parts.map((part) => part.ProducerId).filter((id): id is number => typeof id === 'number'))
+            ).sort((a, b) => a - b) // Сортируем для стабильного сравнения
+            return ids
+        }
+        return []
+    }, [parts, searchType])
+
+    // Передаем ProducerId в родительский компонент
+    const prevProducerIdsRef = useRef<number[]>([])
+    useEffect(() => {
+        // Сравниваем массивы глубоко, чтобы избежать лишних вызовов
+        const idsChanged = producerIdsFromParts.length !== prevProducerIdsRef.current.length ||
+            producerIdsFromParts.some((id, index) => id !== prevProducerIdsRef.current[index])
+        
+        if (idsChanged && onProducerIdsChange) {
+            prevProducerIdsRef.current = producerIdsFromParts
+            onProducerIdsChange(producerIdsFromParts)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [producerIdsFromParts])
 
     useEffect(() => {
         tableContainerRef.current?.scrollTo({top: 0})
