@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
-import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
+import {PartDetailsModal} from '../partDetailsModal/PartDetailsModal.tsx';
 import {PartFormModal} from './components/partFormModal';
 import {PartsHeader} from './components/PartsHeader.tsx';
 import {PartsSearch} from './components/PartsSearch.tsx';
@@ -224,7 +224,7 @@ export const PartsPanel = ({
                 />
             )}
 
-            <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
+            <PartDetailsModal producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
 
             <PartFormModal
                 open={isModalOpen}

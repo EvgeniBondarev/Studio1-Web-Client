@@ -5,7 +5,7 @@ import type { MenuProps } from 'antd'
 import type { EtPart, EtProducer, CtUser } from './api/types.ts'
 import { ProducerPanel } from './components/ProducerPanel.tsx'
 import {PartsPanel, type SearchType} from './components/partsPanel'
-import { PartDetailsDrawer } from './components/PartDetailsDrawer.tsx'
+import { PartDetailsModal } from './components/partDetailsModal/PartDetailsModal.tsx'
 import { LoginPage } from './components/LoginPage.tsx'
 import { UserProfileModal } from './components/UserProfileModal.tsx'
 import { fetchProducerById } from './api/producers.ts'
@@ -399,7 +399,7 @@ const App = () => {
         </Layout>
       </Layout>
 
-      <PartDetailsDrawer producer={selectedProducer} part={selectedPart} onClose={() => setSelectedPart(null)} />
+      <PartDetailsModal producer={selectedProducer} part={selectedPart} onClose={() => setSelectedPart(null)} />
       <UserProfileModal
         user={currentUser}
         open={profileModalOpen}
