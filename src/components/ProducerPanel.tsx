@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
-import { Button, Empty, Flex, Input, List, message, Modal, Select, Space, Spin, Typography } from 'antd'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button, Empty, Flex, Input, message, Modal, Select, Space, Spin, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, LinkOutlined, PlusOutlined, QuestionCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import {
   createProducer,
   deleteProducer,
   fetchProducersPage,
   updateProducer,
+  linkProducers,
 } from '../api/producers.ts'
 import type { ProducersPageResult } from '../api/producers.ts'
 import type { EtProducer } from '../api/types.ts'
@@ -34,6 +35,7 @@ interface ProducerPanelProps {
   externalSearch?: string
   onSearchChange?: (value: string) => void
   searchType?: 'by_producer' | 'without_producer'
+  filterProducerIds?: number[]
 }
 
 export const ProducerPanel = ({
@@ -42,14 +44,18 @@ export const ProducerPanel = ({
   externalSearch,
   onSearchChange,
   searchType = 'by_producer',
+  filterProducerIds,
 }: ProducerPanelProps) => {
   const [search, setSearch] = useState('')
   const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
+  // Синхронизируем externalSearch с локальным search, но только если они действительно отличаются
+  const prevExternalSearchRef = useRef<string | undefined>(externalSearch)
   useEffect(() => {
-    if (externalSearch !== undefined && externalSearch !== search) {
+    if (externalSearch !== undefined && externalSearch !== prevExternalSearchRef.current) {
+      prevExternalSearchRef.current = externalSearch
       setSearch(externalSearch)
     }
-  }, [externalSearch, search])
+  }, [externalSearch])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -63,8 +69,18 @@ export const ProducerPanel = ({
   const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
   const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
+  const [linkModalOpen, setLinkModalOpen] = useState(false)
+  const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
   const queryClient = useQueryClient()
   const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Очищаем выделение при изменении режима поиска
+  useEffect(() => {
+    if (searchType === 'without_producer') {
+      setSelectedProducerIds(new Set())
+    }
+  }, [searchType])
 
   const {
     data,
@@ -97,9 +113,49 @@ export const ProducerPanel = ({
 
   const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
   
+  // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
+  const missingProducerIds = useMemo(() => {
+    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
+      const existingIds = new Set(allProducers.map((p) => p.Id))
+      return filterProducerIds.filter((id) => !existingIds.has(id))
+    }
+    return []
+  }, [searchType, filterProducerIds, allProducers])
+
+  const missingProducersQueries = useQueries({
+    queries: missingProducerIds.map((producerId) => ({
+      queryKey: ['producer', producerId],
+      queryFn: () => fetchProducerById(producerId),
+      enabled: searchType === 'without_producer' && missingProducerIds.length > 0,
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  const missingProducers = useMemo(() => {
+    const producers: EtProducer[] = []
+    missingProducersQueries.forEach((query, index) => {
+      if (query.data) {
+        producers.push(query.data)
+      }
+    })
+    return producers
+  }, [missingProducersQueries])
+
+  // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
+  const filteredProducers = useMemo(() => {
+    const combined = [...allProducers, ...missingProducers]
+    
+    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
+      const filterSet = new Set(filterProducerIds)
+      return combined.filter((producer) => filterSet.has(producer.Id))
+    }
+    
+    return combined
+  }, [allProducers, missingProducers, searchType, filterProducerIds])
+  
   // Загружаем количество деталей для каждого производителя
   const partsCountQueries = useQueries({
-    queries: allProducers.map((producer) => ({
+    queries: filteredProducers.map((producer) => ({
       queryKey: ['producerPartsCount', producer.Id],
       queryFn: () => fetchPartsCount(producer.Id),
       enabled: Boolean(producer.Id),
@@ -109,7 +165,7 @@ export const ProducerPanel = ({
   
   const partsCountMap = useMemo(() => {
     const map = new Map<number, { value?: number; isLoading: boolean }>()
-    allProducers.forEach((producer, index) => {
+    filteredProducers.forEach((producer, index) => {
       const query = partsCountQueries[index]
       map.set(producer.Id, {
         value: query?.data ?? undefined,
@@ -117,26 +173,26 @@ export const ProducerPanel = ({
       })
     })
     return map
-  }, [allProducers, partsCountQueries])
+  }, [filteredProducers, partsCountQueries])
   
   // Подсчет частоты префиксов
   const prefixFrequencyMap = useMemo(() => {
     const frequencyMap = new Map<string, number>()
-    allProducers.forEach((producer) => {
+    filteredProducers.forEach((producer) => {
       const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
       if (prefix && prefix !== '—') {
         frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
       }
     })
     return frequencyMap
-  }, [allProducers])
+  }, [filteredProducers])
 
   const sortedProducers = useMemo(() => {
     if (!sortField) {
-      return allProducers
+      return filteredProducers
     }
     
-    const sorted = [...allProducers].sort((a, b) => {
+    const sorted = [...filteredProducers].sort((a, b) => {
       let comparison = 0
       
       switch (sortField) {
@@ -164,7 +220,7 @@ export const ProducerPanel = ({
     })
     
     return sorted
-  }, [allProducers, sortField, sortOrder, partsCountMap])
+  }, [filteredProducers, sortField, sortOrder, partsCountMap])
 
   // Автоматическая загрузка при прокрутке
   useEffect(() => {
@@ -191,6 +247,7 @@ export const ProducerPanel = ({
       observer.disconnect()
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
   
   // Получаем общее количество из первой страницы
   const totalProducers = useMemo(() => {
@@ -272,6 +329,21 @@ export const ProducerPanel = ({
     },
   })
 
+  const linkMutation = useMutation({
+    mutationFn: ({ producerIds, targetProducerId }: { producerIds: number[]; targetProducerId: number }) =>
+      linkProducers(producerIds, targetProducerId),
+    onSuccess: () => {
+      message.success('Ссылка на оригинал успешно создана')
+      queryClient.invalidateQueries({ queryKey: ['producers'] })
+      setSelectedProducerIds(new Set())
+      setLinkModalOpen(false)
+      setLinkTargetProducer(null)
+    },
+    onError: () => {
+      message.error('Ошибка при создании ссылки на оригинал')
+    },
+  })
+
   const confirmDelete = (producer: EtProducer) => {
     Modal.confirm({
       title: 'Удалить производителя?',
@@ -280,6 +352,54 @@ export const ProducerPanel = ({
       cancelText: 'Отмена',
       okButtonProps: { danger: true, loading: deleteMutation.isPending },
       onOk: () => deleteMutation.mutate(producer.Id),
+    })
+  }
+
+  const handleProducerClick = (producer: EtProducer, event: MouseEvent) => {
+    // Если зажат Ctrl, добавляем/убираем из выделения
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      setSelectedProducerIds((prev) => {
+        const newSet = new Set(prev)
+        if (newSet.has(producer.Id)) {
+          newSet.delete(producer.Id)
+        } else {
+          newSet.add(producer.Id)
+        }
+        return newSet
+      })
+      return
+    }
+
+    // Если есть выделенные производители и клик без Ctrl, показываем модальное окно ссылки на оригинал
+    if (selectedProducerIds.size > 0) {
+      event.preventDefault()
+      event.stopPropagation()
+      setLinkTargetProducer(producer)
+      setLinkModalOpen(true)
+      return
+    }
+
+    // Стандартное поведение - выбор производителя
+    if (searchType === 'without_producer') {
+      message.info('Сейчас включён поиск деталей без привязки к производителю.')
+      return
+    }
+    onSelect(producer)
+  }
+
+  const handleLinkConfirm = () => {
+    if (!linkTargetProducer) {
+      return
+    }
+    const producerIdsArray = Array.from(selectedProducerIds)
+    if (producerIdsArray.length === 0) {
+      return
+    }
+    linkMutation.mutate({
+      producerIds: producerIdsArray,
+      targetProducerId: linkTargetProducer.Id,
     })
   }
 
@@ -328,11 +448,8 @@ export const ProducerPanel = ({
             Деталей {renderSortIcon('count')}
           </Typography.Text>
         </div>
-        <List
-          className="producer-list"
-          dataSource={sortedProducers}
-          split={false}
-          renderItem={(producer) => {
+        <div className="producer-list">
+          {sortedProducers.map((producer) => {
           const isActive = producer.Id === selectedProducer?.Id
           const isNonOriginal =
             producer.RealId !== undefined && producer.RealId !== null && producer.RealId !== producer.Id
@@ -378,19 +495,16 @@ export const ProducerPanel = ({
             if (isActive) {
               rowClassNames.push('producer-row--active')
             }
+            if (selectedProducerIds.has(producer.Id)) {
+              rowClassNames.push('producer-row--selected')
+            }
 
             return (
-              <ContextActionsMenu actions={actions}>
-                <List.Item
+              <ContextActionsMenu key={producer.Id} actions={actions}>
+                <div
                   className="producer-row-wrapper"
                   style={{ padding: 0 }}
-                  onClick={() => {
-                    if (searchType === 'without_producer') {
-                      message.info('Сейчас включён поиск деталей без привязки к производителю.')
-                      return
-                    }
-                    onSelect(producer)
-                  }}
+                  onClick={(e) => handleProducerClick(producer, e)}
                 >
                   <div className={rowClassNames.join(' ')}>
                     <Typography.Text
@@ -450,11 +564,11 @@ export const ProducerPanel = ({
                       })()}
                     </Typography.Text>
                   </div>
-                </List.Item>
+                </div>
               </ContextActionsMenu>
             )
-          }}
-        />
+          })}
+        </div>
       </>
     ) : (
       <Empty description="Производители не найдены" />
@@ -508,7 +622,10 @@ export const ProducerPanel = ({
           onChange={(event) => {
             const { value } = event.target
             setSearch(value)
-            onSearchChange?.(value)
+            // Вызываем onSearchChange только если значение действительно изменилось и отличается от externalSearch
+            if (onSearchChange && value !== externalSearch) {
+              onSearchChange(value)
+            }
           }}
           style={{ flex: 1 }}
         />
@@ -554,6 +671,65 @@ export const ProducerPanel = ({
         loading={createMutation.isPending || updateMutation.isPending}
         initialValues={editingProducer ?? { Rating: 0 }}
       />
+
+      <Modal
+        title="Ссылка на оригинал"
+        open={linkModalOpen}
+        onOk={handleLinkConfirm}
+        onCancel={() => {
+          setLinkModalOpen(false)
+          setLinkTargetProducer(null)
+        }}
+        okText="Связать с оригиналом"
+        cancelText="Отмена"
+        confirmLoading={linkMutation.isPending}
+        width={600}
+      >
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Typography.Text strong>Выбранные производители для ссылки на оригинал:</Typography.Text>
+            <div
+              style={{ marginTop: 8, maxHeight: 200, overflow: 'auto', border: '1px solid #d9d9d9', borderRadius: 4, padding: 8 }}
+            >
+              {Array.from(selectedProducerIds)
+                .map((id) => filteredProducers.find((p) => p.Id === id))
+                .filter(Boolean)
+                .map((producer) => (
+                  <div key={producer!.Id} style={{ padding: '4px 0' }}>
+                    <Space>
+                      <Typography.Text strong>{producer!.Prefix ?? '—'}</Typography.Text>
+                      <Typography.Text>{producer!.Name ?? '—'}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        (ID: {producer!.Id})
+                      </Typography.Text>
+                    </Space>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          <div>
+            <Typography.Text strong>Связать с оригинальным производителем:</Typography.Text>
+            <div style={{ marginTop: 8, padding: 12, background: 'var(--ant-color-fill-tertiary)', borderRadius: 4 }}>
+              <Space orientation="vertical" size={4}>
+                <Typography.Text strong>
+                  {linkTargetProducer?.Name ?? '—'}
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Префикс: {linkTargetProducer?.Prefix ?? '—'}
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  ID: {linkTargetProducer?.Id}
+                </Typography.Text>
+              </Space>
+            </div>
+          </div>
+
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            RealId выделенных производителей будет заменен на ID выбранного производителя ({linkTargetProducer?.Id}).
+          </Typography.Text>
+        </Space>
+      </Modal>
     </Flex>
   )
 }

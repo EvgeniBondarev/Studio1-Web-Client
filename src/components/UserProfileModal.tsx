@@ -56,7 +56,7 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
           Ошибка при загрузке данных профиля
         </div>
       ) : userDetails ? (
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           {/* Заголовок с именем */}
           <div>
             <Title level={4} style={{ margin: 0 }}>

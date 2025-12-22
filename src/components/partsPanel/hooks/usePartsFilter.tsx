@@ -100,7 +100,8 @@ export const usePartsFilter = ({
     // Оповещение об изменении типа поиска
     useEffect(() => {
         onSearchTypeChange?.(searchType)
-    }, [searchType, onSearchTypeChange])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchType])
 
     const handleSearchTypeChange = (newType: SearchType) => {
         setSearchType(newType)
