@@ -1,13 +1,11 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {useInfiniteQuery, useMutation, useQueryClient} from '@tanstack/react-query'
+import {useMutation, useQueryClient} from '@tanstack/react-query'
 import {Button, Empty, Flex, message, Modal, Space, Spin, Typography} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
 import {
     createProducer, deleteProducer,
     fetchProducerById,
-    fetchProducersPage,
-    type ProducersPageResult,
     updateProducer
 } from '../../api/producers.ts';
 import {ProducerRow} from './components/ProducerRow.tsx';
@@ -24,6 +22,7 @@ import {ProducerFilters} from './components/ProducerFilters.tsx';
 import {usePrefixFrequencyMap} from './hooks/usePrefixFrequencyMap.ts';
 import {useFilteredProducers} from './hooks/useFilteredProducers.ts';
 import {useMissingProducers} from './hooks/useMissingProducers.ts';
+import {useProducerPages} from './hooks/useProducerPages.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -91,36 +90,17 @@ export const ProducerPanel = ({
         }
     }, [searchType])
 
+    // Пагинированная загрузка списка производителей
     const {
-        data,
+        allProducers,
+        producerPages,
         isLoading,
         isFetching,
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
         refetch,
-    } = useInfiniteQuery({
-        queryKey: ['producers', search, filterMode],
-        queryFn: ({pageParam}) =>
-            fetchProducersPage(
-                search && search.trim() ? search.trim() : undefined,
-                pageParam as string | undefined,
-                {
-                    filterMode,
-                },
-            ),
-        getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
-        initialPageParam: undefined as string | undefined,
-    })
-
-    const producerPages = useMemo<ProducersPageResult[]>(() => {
-        if (!data?.pages) {
-            return []
-        }
-        return data.pages.filter((page): page is ProducersPageResult => Boolean(page))
-    }, [data])
-
-    const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
+    } = useProducerPages({search, filterMode})
 
     // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
     const { missingProducers } = useMissingProducers({
