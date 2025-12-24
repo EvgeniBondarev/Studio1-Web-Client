@@ -18,6 +18,7 @@ import {producerFields} from '../../config/resources.ts';
 import * as React from 'react';
 import {LinkToOriginalModal} from './LinkToOriginalModal.tsx';
 import {ProducerListHeader} from './ProducerListHeader.tsx';
+import {LoadMoreIndicator} from './LoadMoreIndicator.tsx';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -428,24 +429,13 @@ export const ProducerPanel = ({
         return (
             <>
                 {listContent}
-                {(hasNextPage || isFetchingNextPage) && (
-                    <Flex
-                        ref={loadMoreRef}
-                        vertical
-                        align="center"
-                        style={{padding: 12}}
-                        gap={4}
-                    >
-                        {isFetchingNextPage && (
-                            <Spin size="small"/>
-                        )}
-                        {totalProducers !== undefined && totalProducers > sortedProducers.length && (
-                            <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                Еще {((totalProducers - sortedProducers.length).toLocaleString('ru-RU'))} записей
-                            </Typography.Text>
-                        )}
-                    </Flex>
-                )}
+                <LoadMoreIndicator
+                  ref={loadMoreRef}
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  totalProducers={totalProducers}
+                  loadedItemsCount={sortedProducers.length}
+                />
             </>
         )
     }
