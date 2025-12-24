@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useInfiniteQuery, useMutation, useQueries, useQueryClient} from '@tanstack/react-query'
-import {Button, Empty, Flex, Input, message, Modal, Select, Space, Spin, Typography} from 'antd'
+import {Button, Empty, Flex, message, Modal, Space, Spin, Typography} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
 import {
@@ -20,8 +20,9 @@ import {ProducerListHeader} from './components/ProducerListHeader.tsx';
 import {LoadMoreIndicator} from './components/LoadMoreIndicator.tsx';
 import {useSortedProducers} from './hooks/useSortedProducers.ts';
 import {useProducersPartsCount} from './hooks/useProducersPartsCount.ts';
+import {ProducerFilters} from './components/ProducerFilters.tsx';
 
-type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
+export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
 export type SortOrder = 'asc' | 'desc';
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
@@ -336,6 +337,14 @@ export const ProducerPanel = ({
         setLinkTargetProducer(null);
     }, []);
 
+    const handleSearchChange = useCallback((value: string) => {
+      setSearch(value)
+      // Вызываем onSearchChange только если значение действительно изменилось и отличается от externalSearch*/}
+      if (onSearchChange && value !== externalSearch) {
+        onSearchChange(value)
+      }
+    }, []);
+
     const renderList = () => {
         if (isLoading) {
             return (
@@ -410,37 +419,12 @@ export const ProducerPanel = ({
                 </Space>
             </Flex>
 
-            <Space.Compact style={{width: '100%'}} className="panel-search">
-                <Input.Search
-                    placeholder="Поиск по названию или префиксу"
-                    allowClear
-                    size="small"
-                    value={search}
-                    onChange={(event) => {
-                        const {value} = event.target
-                        setSearch(value)
-                        // Вызываем onSearchChange только если значение действительно изменилось и отличается от externalSearch
-                        if (onSearchChange && value !== externalSearch) {
-                            onSearchChange(value)
-                        }
-                    }}
-                    style={{flex: 1}}
-                />
-                <Select
-                    value={filterMode}
-                    onChange={(value: ProducerFilterMode) => setFilterMode(value)}
-                    size="small"
-                    style={{width: 70}}
-                    popupMatchSelectWidth={false}
-                    styles={{popup: {root: {width: 170}}}}
-                    options={[
-                        {value: 'all', label: 'Все производители'},
-                        {value: 'originals', label: 'Только оригинальные'},
-                        {value: 'non-originals', label: 'Не оригинальные'},
-                        {value: 'with-prefix', label: 'С заполненным префиксом'},
-                    ]}
-                />
-            </Space.Compact>
+            <ProducerFilters
+              search={search}
+              onSearchChange={handleSearchChange}
+              filterMode={filterMode}
+              onFilterModeChange={setFilterMode}
+            />
 
             <div className="panel-body">{renderList()}</div>
 
