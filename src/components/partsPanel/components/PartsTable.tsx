@@ -38,13 +38,13 @@ export const PartsTable = ({
     const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
-    // Автоматическая загрузка при прокрутке
-    useInfiniteScroll({
-      loadMoreRef: loadMoreRef,
-      isFetchingNextPage: isFetchingNextPage,
-      hasNextPage: hasNextPage,
-      fetchNextPage: fetchNextPage,
-    })
+  // Автоматическая загрузка при прокрутке
+  useInfiniteScroll({
+    loadMoreRef,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  })
 
     const renderBody = () => {
         if (initialLoading) {

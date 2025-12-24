@@ -133,10 +133,10 @@ export const ProducerPanel = ({
 
     // Автоматическая загрузка при прокрутке
     useInfiniteScroll({
-        loadMoreRef: loadMoreRef,
-        isFetchingNextPage: isFetchingNextPage,
-        hasNextPage: hasNextPage,
-        fetchNextPage: fetchNextPage,
+        loadMoreRef,
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
     })
 
     // Получаем общее количество из первой страницы
