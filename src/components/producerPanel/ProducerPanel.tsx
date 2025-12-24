@@ -10,7 +10,6 @@ import {
     type ProducersPageResult,
     updateProducer
 } from '../../api/producers.ts';
-import {fetchPartsCount} from '../../api/parts.ts';
 import {ProducerRow} from './components/ProducerRow.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
@@ -19,7 +18,8 @@ import * as React from 'react';
 import {LinkToOriginalModal} from './components/LinkToOriginalModal.tsx';
 import {ProducerListHeader} from './components/ProducerListHeader.tsx';
 import {LoadMoreIndicator} from './components/LoadMoreIndicator.tsx';
-import {type PartsCountInfo, useSortedProducers} from './hooks/useSortedProducers.ts';
+import {useSortedProducers} from './hooks/useSortedProducers.ts';
+import {useProducersPartsCount} from './hooks/useProducersPartsCount.ts';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -158,27 +158,7 @@ export const ProducerPanel = ({
         return combined
     }, [allProducers, missingProducers, searchType, filterProducerIds])
 
-    // Загружаем количество деталей для каждого производителя
-    const partsCountQueries = useQueries({
-        queries: filteredProducers.map((producer) => ({
-            queryKey: ['producerPartsCount', producer.Id],
-            queryFn: () => fetchPartsCount(producer.Id),
-            enabled: Boolean(producer.Id),
-            staleTime: 5 * 60 * 1000,
-        })),
-    })
-
-    const partsCountMap = useMemo(() => {
-        const map = new Map<number, PartsCountInfo>()
-        filteredProducers.forEach((producer, index) => {
-            const query = partsCountQueries[index]
-            map.set(producer.Id, {
-                value: query?.data ?? undefined,
-                isLoading: query?.isLoading ?? false,
-            })
-        })
-        return map
-    }, [filteredProducers, partsCountQueries])
+    const partsCountMap = useProducersPartsCount({producers:filteredProducers})
 
     // Подсчет частоты префиксов
     const prefixFrequencyMap = useMemo(() => {
