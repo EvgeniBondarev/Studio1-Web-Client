@@ -1,8 +1,8 @@
 import * as React from 'react'
 import {Space, Typography} from 'antd'
 import {LinkOutlined, QuestionCircleOutlined, InfoCircleOutlined, EditOutlined, DeleteOutlined} from '@ant-design/icons'
-import {ContextActionsMenu} from '../ContextActionsMenu.tsx'
-import type {EtProducer} from '../../api/types.ts';
+import {ContextActionsMenu} from '../../ContextActionsMenu.tsx'
+import type {EtProducer} from '../../../api/types.ts';
 
 interface ProducerRowProps {
     producer: EtProducer

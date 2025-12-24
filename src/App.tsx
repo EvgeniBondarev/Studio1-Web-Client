@@ -13,12 +13,13 @@ import {
 import type {MenuProps} from 'antd'
 import type {EtPart, EtProducer, CtUser} from './api/types.ts'
 import {ProducerPanel} from './components/producerPanel'
-import {PartsPanel, type SearchType} from './components/partsPanel'
+import {PartsPanel} from './components/partsPanel'
 import {PartDetailsModal} from './components/partDetailsModal'
 import {LoginPage} from './components/LoginPage.tsx'
 import {UserProfileModal} from './components/UserProfileModal.tsx'
 import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
+import type {SearchType} from './config/resources.ts';
 
 const {Sider, Content} = Layout
 

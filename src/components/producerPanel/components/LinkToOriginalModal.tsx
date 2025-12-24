@@ -1,6 +1,6 @@
 import {message, Modal, Space, Typography} from 'antd';
-import type {EtProducer} from '../../api/types.ts';
-import {linkProducers} from '../../api/producers.ts';
+import type {EtProducer} from '../../../api/types.ts';
+import {linkProducers} from '../../../api/producers.ts';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 
 

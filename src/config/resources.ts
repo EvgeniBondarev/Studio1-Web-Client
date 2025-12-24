@@ -1,4 +1,5 @@
 export type FieldType = 'text' | 'number' | 'url' | 'textarea'
+export type SearchType = 'by_producer' | 'without_producer'
 
 export interface FieldConfig {
   name: string
