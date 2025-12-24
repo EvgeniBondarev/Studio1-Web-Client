@@ -1,6 +1,6 @@
 import {Typography} from 'antd';
 import {ArrowUpOutlined, ArrowDownOutlined} from '@ant-design/icons';
-import type {SortField} from './ProducerPanel.tsx';
+import type {SortField} from '../ProducerPanel.tsx';
 
 interface Props {
   sortField: SortField | null;

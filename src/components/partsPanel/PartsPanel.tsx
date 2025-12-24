@@ -14,8 +14,8 @@ import {usePartFormModal} from './hooks/usePartFormModal.ts';
 import {useCopyToClipboard} from './hooks/useCopyToClipboard.ts';
 import {useCountLabel} from './hooks/useCountLabel.ts';
 import {useSearchNormalization} from './hooks/useSearchNormalization.ts';
+import type {SearchType} from '../../config/resources.ts';
 
-export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
 
 interface PartsPanelProps {

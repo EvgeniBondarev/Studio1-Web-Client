@@ -1,10 +1,11 @@
 import { Input, Select, Space } from 'antd'
 import type { EtProducer } from '../../../api/types.ts'
-import type {CodeFilterMode, SearchType} from '../PartsPanel.tsx';
+import type {CodeFilterMode} from '../PartsPanel.tsx';
 import type {ChangeEvent} from 'react';
+import type {SearchType} from '../../../config/resources.ts';
 
 interface PartsSearchProps {
-    searchType: SearchType
+  searchType: SearchType;
     codeFilterMode: CodeFilterMode
     producer?: EtProducer | null
     searchInput: string
