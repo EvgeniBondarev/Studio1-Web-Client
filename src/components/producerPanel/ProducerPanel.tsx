@@ -23,6 +23,7 @@ import {usePrefixFrequencyMap} from './hooks/usePrefixFrequencyMap.ts';
 import {useFilteredProducers} from './hooks/useFilteredProducers.ts';
 import {useMissingProducers} from './hooks/useMissingProducers.ts';
 import {useProducerPages} from './hooks/useProducerPages.ts';
+import {useInfiniteScroll} from '../hooks/useInfiniteScroll.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -131,31 +132,12 @@ export const ProducerPanel = ({
     });
 
     // Автоматическая загрузка при прокрутке
-    useEffect(() => {
-        if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
-            return
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-                    fetchNextPage()
-                }
-            },
-            {
-                root: null,
-                rootMargin: '100px',
-                threshold: 0.1,
-            },
-        )
-
-        observer.observe(loadMoreRef.current)
-
-        return () => {
-            observer.disconnect()
-        }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
+    useInfiniteScroll({
+        loadMoreRef: loadMoreRef,
+        isFetchingNextPage: isFetchingNextPage,
+        hasNextPage: hasNextPage,
+        fetchNextPage: fetchNextPage,
+    })
 
     // Получаем общее количество из первой страницы
     const totalProducers = useMemo(() => {
