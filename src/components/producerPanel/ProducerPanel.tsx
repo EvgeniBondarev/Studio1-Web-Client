@@ -21,6 +21,7 @@ import {LoadMoreIndicator} from './components/LoadMoreIndicator.tsx';
 import {useSortedProducers} from './hooks/useSortedProducers.ts';
 import {useProducersPartsCount} from './hooks/useProducersPartsCount.ts';
 import {ProducerFilters} from './components/ProducerFilters.tsx';
+import {usePrefixFrequencyMap} from './hooks/usePrefixFrequencyMap.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -162,17 +163,7 @@ export const ProducerPanel = ({
     const partsCountMap = useProducersPartsCount({producers:filteredProducers})
 
     // Подсчет частоты префиксов
-    const prefixFrequencyMap = useMemo(() => {
-        const frequencyMap = new Map<string, number>()
-        filteredProducers.forEach((producer) => {
-            const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
-            if (prefix && prefix !== '—') {
-                frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
-            }
-        })
-        return frequencyMap
-    }, [filteredProducers])
-
+    const prefixFrequencyMap = usePrefixFrequencyMap(filteredProducers)
 
     const sortedProducers = useSortedProducers({
         producers: filteredProducers,
