@@ -6,7 +6,7 @@ import type {EtProducer} from '../../api/types.ts';
 import {
     createProducer, deleteProducer,
     fetchProducerById,
-    fetchProducersPage, linkProducers,
+    fetchProducersPage,
     type ProducersPageResult,
     updateProducer
 } from '../../api/producers.ts';
@@ -16,382 +16,354 @@ import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
 import {producerFields} from '../../config/resources.ts';
 import * as React from 'react';
+import {LinkToOriginalModal} from './LinkToOriginalModal.tsx';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
-  if (typeof window === 'undefined') {
-    return 'all'
-  }
-  const stored = window.sessionStorage.getItem(PRODUCER_FILTER_MODE_SESSION_KEY)
-  return stored === 'originals' ? 'originals' : 'all'
+    if (typeof window === 'undefined') {
+        return 'all'
+    }
+    const stored = window.sessionStorage.getItem(PRODUCER_FILTER_MODE_SESSION_KEY)
+    return stored === 'originals' ? 'originals' : 'all'
 }
 
 interface ProducerPanelProps {
-  selectedProducer?: EtProducer | null
-  onSelect: (producer: EtProducer | null) => void
-  externalSearch?: string
-  onSearchChange?: (value: string) => void
-  searchType?: 'by_producer' | 'without_producer'
-  filterProducerIds?: number[]
+    selectedProducer?: EtProducer | null
+    onSelect: (producer: EtProducer | null) => void
+    externalSearch?: string
+    onSearchChange?: (value: string) => void
+    searchType?: 'by_producer' | 'without_producer'
+    filterProducerIds?: number[]
 }
 
 export const ProducerPanel = ({
-  selectedProducer,
-  onSelect,
-  externalSearch,
-  onSearchChange,
-  searchType = 'by_producer',
-  filterProducerIds,
-}: ProducerPanelProps) => {
-  const [search, setSearch] = useState('')
-  const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
-  // Синхронизируем externalSearch с локальным search, но только если они действительно отличаются
-  const prevExternalSearchRef = useRef<string | undefined>(externalSearch)
-  useEffect(() => {
-    if (externalSearch !== undefined && externalSearch !== prevExternalSearchRef.current) {
-      prevExternalSearchRef.current = externalSearch
-      setSearch(externalSearch)
-    }
-  }, [externalSearch])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.sessionStorage.setItem(PRODUCER_FILTER_MODE_SESSION_KEY, filterMode)
-  }, [filterMode])
-
-  const [isModalOpen, setModalOpen] = useState(false)
-  const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
-  const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
-  const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
-  const [linkModalOpen, setLinkModalOpen] = useState(false)
-  const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
-  const queryClient = useQueryClient()
-  const loadMoreRef = useRef<HTMLDivElement>(null)
-
-  // Очищаем выделение при изменении режима поиска
-  useEffect(() => {
-    if (searchType === 'without_producer') {
-      setSelectedProducerIds(new Set())
-    }
-  }, [searchType])
-
-  const {
-    data,
-    isLoading,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ['producers', search, filterMode],
-    queryFn: ({ pageParam }) =>
-      fetchProducersPage(
-        search && search.trim() ? search.trim() : undefined,
-        pageParam as string | undefined,
-        {
-          filterMode,
-        },
-      ),
-    getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
-    initialPageParam: undefined as string | undefined,
-  })
-
-  const producerPages = useMemo<ProducersPageResult[]>(() => {
-    if (!data?.pages) {
-      return []
-    }
-    return data.pages.filter((page): page is ProducersPageResult => Boolean(page))
-  }, [data])
-
-  const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
-  
-  // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
-  const missingProducerIds = useMemo(() => {
-    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-      const existingIds = new Set(allProducers.map((p) => p.Id))
-      return filterProducerIds.filter((id) => !existingIds.has(id))
-    }
-    return []
-  }, [searchType, filterProducerIds, allProducers])
-
-  const missingProducersQueries = useQueries({
-    queries: missingProducerIds.map((producerId) => ({
-      queryKey: ['producer', producerId],
-      queryFn: () => fetchProducerById(producerId),
-      enabled: searchType === 'without_producer' && missingProducerIds.length > 0,
-      staleTime: 5 * 60 * 1000,
-    })),
-  })
-
-  const missingProducers = useMemo(() => {
-    const producers: EtProducer[] = []
-    missingProducersQueries.forEach((query) => {
-      if (query.data) {
-        producers.push(query.data)
-      }
-    })
-    return producers
-  }, [missingProducersQueries])
-
-  // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
-  const filteredProducers = useMemo(() => {
-    const combined = [...allProducers, ...missingProducers]
-    
-    if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-      const filterSet = new Set(filterProducerIds)
-      return combined.filter((producer) => filterSet.has(producer.Id))
-    }
-    
-    return combined
-  }, [allProducers, missingProducers, searchType, filterProducerIds])
-  
-  // Загружаем количество деталей для каждого производителя
-  const partsCountQueries = useQueries({
-    queries: filteredProducers.map((producer) => ({
-      queryKey: ['producerPartsCount', producer.Id],
-      queryFn: () => fetchPartsCount(producer.Id),
-      enabled: Boolean(producer.Id),
-      staleTime: 5 * 60 * 1000,
-    })),
-  })
-  
-  const partsCountMap = useMemo(() => {
-    const map = new Map<number, { value?: number; isLoading: boolean }>()
-    filteredProducers.forEach((producer, index) => {
-      const query = partsCountQueries[index]
-      map.set(producer.Id, {
-        value: query?.data ?? undefined,
-        isLoading: query?.isLoading ?? false,
-      })
-    })
-    return map
-  }, [filteredProducers, partsCountQueries])
-  
-  // Подсчет частоты префиксов
-  const prefixFrequencyMap = useMemo(() => {
-    const frequencyMap = new Map<string, number>()
-    filteredProducers.forEach((producer) => {
-      const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
-      if (prefix && prefix !== '—') {
-        frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
-      }
-    })
-    return frequencyMap
-  }, [filteredProducers])
-
-  const sortedProducers = useMemo(() => {
-    if (!sortField) {
-      return filteredProducers
-    }
-    
-    const sorted = [...filteredProducers].sort((a, b) => {
-      let comparison = 0
-      
-      switch (sortField) {
-        case 'prefix': {
-          const prefixA = a.MarketPrefix ?? a.Prefix ?? ''
-          const prefixB = b.MarketPrefix ?? b.Prefix ?? ''
-          comparison = prefixA.localeCompare(prefixB, 'ru', { sensitivity: 'base' })
-          break
+                                  selectedProducer,
+                                  onSelect,
+                                  externalSearch,
+                                  onSearchChange,
+                                  searchType = 'by_producer',
+                                  filterProducerIds,
+                              }: ProducerPanelProps) => {
+    const [search, setSearch] = useState('')
+    const [filterMode, setFilterMode] = useState<ProducerFilterMode>(() => loadProducerFilterMode())
+    // Синхронизируем externalSearch с локальным search, но только если они действительно отличаются
+    const prevExternalSearchRef = useRef<string | undefined>(externalSearch)
+    useEffect(() => {
+        if (externalSearch !== undefined && externalSearch !== prevExternalSearchRef.current) {
+            prevExternalSearchRef.current = externalSearch
+            setSearch(externalSearch)
         }
-        case 'name': {
-          const nameA = a.Name ?? ''
-          const nameB = b.Name ?? ''
-          comparison = nameA.localeCompare(nameB, 'ru', { sensitivity: 'base' })
-          break
+    }, [externalSearch])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
         }
-        case 'count': {
-          const countA = partsCountMap.get(a.Id)?.value ?? 0
-          const countB = partsCountMap.get(b.Id)?.value ?? 0
-          comparison = countA - countB
-          break
+        window.sessionStorage.setItem(PRODUCER_FILTER_MODE_SESSION_KEY, filterMode)
+    }, [filterMode])
+
+    const [isModalOpen, setModalOpen] = useState(false)
+    const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
+    const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
+    const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+    const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
+    const [linkModalOpen, setLinkModalOpen] = useState(false)
+    const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
+    const queryClient = useQueryClient()
+    const loadMoreRef = useRef<HTMLDivElement>(null)
+
+    // Очищаем выделение при изменении режима поиска
+    useEffect(() => {
+        if (searchType === 'without_producer') {
+            setSelectedProducerIds(new Set())
         }
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison
+    }, [searchType])
+
+    const {
+        data,
+        isLoading,
+        isFetching,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        refetch,
+    } = useInfiniteQuery({
+        queryKey: ['producers', search, filterMode],
+        queryFn: ({pageParam}) =>
+            fetchProducersPage(
+                search && search.trim() ? search.trim() : undefined,
+                pageParam as string | undefined,
+                {
+                    filterMode,
+                },
+            ),
+        getNextPageParam: (lastPage) => lastPage?.nextLink ?? undefined,
+        initialPageParam: undefined as string | undefined,
     })
-    
-    return sorted
-  }, [filteredProducers, sortField, sortOrder, partsCountMap])
 
-  // Автоматическая загрузка при прокрутке
-  useEffect(() => {
-    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage()
+    const producerPages = useMemo<ProducersPageResult[]>(() => {
+        if (!data?.pages) {
+            return []
         }
-      },
-      {
-        root: null,
-        rootMargin: '100px',
-        threshold: 0.1,
-      },
-    )
+        return data.pages.filter((page): page is ProducersPageResult => Boolean(page))
+    }, [data])
 
-    observer.observe(loadMoreRef.current)
+    const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
 
-    return () => {
-      observer.disconnect()
+    // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
+    const missingProducerIds = useMemo(() => {
+        if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
+            const existingIds = new Set(allProducers.map((p) => p.Id))
+            return filterProducerIds.filter((id) => !existingIds.has(id))
+        }
+        return []
+    }, [searchType, filterProducerIds, allProducers])
+
+    const missingProducersQueries = useQueries({
+        queries: missingProducerIds.map((producerId) => ({
+            queryKey: ['producer', producerId],
+            queryFn: () => fetchProducerById(producerId),
+            enabled: searchType === 'without_producer' && missingProducerIds.length > 0,
+            staleTime: 5 * 60 * 1000,
+        })),
+    })
+
+    const missingProducers = useMemo(() => {
+        const producers: EtProducer[] = []
+        missingProducersQueries.forEach((query) => {
+            if (query.data) {
+                producers.push(query.data)
+            }
+        })
+        return producers
+    }, [missingProducersQueries])
+
+    // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
+    const filteredProducers = useMemo(() => {
+        const combined = [...allProducers, ...missingProducers]
+
+        if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
+            const filterSet = new Set(filterProducerIds)
+            return combined.filter((producer) => filterSet.has(producer.Id))
+        }
+
+        return combined
+    }, [allProducers, missingProducers, searchType, filterProducerIds])
+
+    // Загружаем количество деталей для каждого производителя
+    const partsCountQueries = useQueries({
+        queries: filteredProducers.map((producer) => ({
+            queryKey: ['producerPartsCount', producer.Id],
+            queryFn: () => fetchPartsCount(producer.Id),
+            enabled: Boolean(producer.Id),
+            staleTime: 5 * 60 * 1000,
+        })),
+    })
+
+    const partsCountMap = useMemo(() => {
+        const map = new Map<number, { value?: number; isLoading: boolean }>()
+        filteredProducers.forEach((producer, index) => {
+            const query = partsCountQueries[index]
+            map.set(producer.Id, {
+                value: query?.data ?? undefined,
+                isLoading: query?.isLoading ?? false,
+            })
+        })
+        return map
+    }, [filteredProducers, partsCountQueries])
+
+    // Подсчет частоты префиксов
+    const prefixFrequencyMap = useMemo(() => {
+        const frequencyMap = new Map<string, number>()
+        filteredProducers.forEach((producer) => {
+            const prefix = producer.MarketPrefix ?? producer.Prefix ?? ''
+            if (prefix && prefix !== '—') {
+                frequencyMap.set(prefix, (frequencyMap.get(prefix) || 0) + 1)
+            }
+        })
+        return frequencyMap
+    }, [filteredProducers])
+
+    const sortedProducers = useMemo(() => {
+        if (!sortField) {
+            return filteredProducers
+        }
+
+        const sorted = [...filteredProducers].sort((a, b) => {
+            let comparison = 0
+
+            switch (sortField) {
+                case 'prefix': {
+                    const prefixA = a.MarketPrefix ?? a.Prefix ?? ''
+                    const prefixB = b.MarketPrefix ?? b.Prefix ?? ''
+                    comparison = prefixA.localeCompare(prefixB, 'ru', {sensitivity: 'base'})
+                    break
+                }
+                case 'name': {
+                    const nameA = a.Name ?? ''
+                    const nameB = b.Name ?? ''
+                    comparison = nameA.localeCompare(nameB, 'ru', {sensitivity: 'base'})
+                    break
+                }
+                case 'count': {
+                    const countA = partsCountMap.get(a.Id)?.value ?? 0
+                    const countB = partsCountMap.get(b.Id)?.value ?? 0
+                    comparison = countA - countB
+                    break
+                }
+            }
+
+            return sortOrder === 'asc' ? comparison : -comparison
+        })
+
+        return sorted
+    }, [filteredProducers, sortField, sortOrder, partsCountMap])
+
+    // Автоматическая загрузка при прокрутке
+    useEffect(() => {
+        if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
+            return
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+                    fetchNextPage()
+                }
+            },
+            {
+                root: null,
+                rootMargin: '100px',
+                threshold: 0.1,
+            },
+        )
+
+        observer.observe(loadMoreRef.current)
+
+        return () => {
+            observer.disconnect()
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+
+    // Получаем общее количество из первой страницы
+    const totalProducers = useMemo(() => {
+        const firstPage = producerPages[0]
+        return firstPage?.total
+    }, [producerPages])
+
+    const handleSort = (field: 'prefix' | 'name' | 'count') => {
+        if (sortField === field) {
+            // Переключаем порядок сортировки
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+        } else {
+            // Устанавливаем новое поле и порядок по умолчанию
+            setSortField(field)
+            setSortOrder('asc')
+        }
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  
-  // Получаем общее количество из первой страницы
-  const totalProducers = useMemo(() => {
-    const firstPage = producerPages[0]
-    return firstPage?.total
-  }, [producerPages])
-
-  const handleSort = (field: 'prefix' | 'name' | 'count') => {
-    if (sortField === field) {
-      // Переключаем порядок сортировки
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      // Устанавливаем новое поле и порядок по умолчанию
-      setSortField(field)
-      setSortOrder('asc')
+    const renderSortIcon = (field: 'prefix' | 'name' | 'count') => {
+        if (sortField !== field) {
+            return null
+        }
+        return sortOrder === 'asc' ? (
+            <ArrowUpOutlined style={{fontSize: 10, marginLeft: 4}}/>
+        ) : (
+            <ArrowDownOutlined style={{fontSize: 10, marginLeft: 4}}/>
+        )
     }
-  }
-
-  const renderSortIcon = (field: 'prefix' | 'name' | 'count') => {
-    if (sortField !== field) {
-      return null
-    }
-    return sortOrder === 'asc' ? (
-      <ArrowUpOutlined style={{ fontSize: 10, marginLeft: 4 }} />
-    ) : (
-      <ArrowDownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
-    )
-  }
 
     const closeModal = () => {
         setModalOpen(false)
         setEditingProducer(null)
     }
 
-  const createMutation = useMutation({
-    mutationFn: createProducer,
-    onSuccess: () => {
-      message.success('Производитель создан')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      closeModal()
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
-      updateProducer(id, payload),
-    onSuccess: () => {
-      message.success('Изменения сохранены')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      closeModal()
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteProducer(id),
-    onSuccess: (_, id) => {
-      message.success('Производитель удалён')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      if (selectedProducer?.Id === id) {
-        onSelect(null)
-      }
-    },
-  })
-
-  const linkMutation = useMutation({
-    mutationFn: ({ producerIds, targetProducerId }: { producerIds: number[]; targetProducerId: number }) =>
-      linkProducers(producerIds, targetProducerId),
-    onSuccess: () => {
-      message.success('Ссылка на оригинал успешно создана')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      setSelectedProducerIds(new Set())
-      setLinkModalOpen(false)
-      setLinkTargetProducer(null)
-    },
-    onError: () => {
-      message.error('Ошибка при создании ссылки на оригинал')
-    },
-  })
-
-  const confirmDelete = (producer: EtProducer) => {
-    Modal.confirm({
-      title: 'Удалить производителя?',
-      content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
-      okText: 'Удалить',
-      cancelText: 'Отмена',
-      okButtonProps: { danger: true, loading: deleteMutation.isPending },
-      onOk: () => deleteMutation.mutate(producer.Id),
+    const createMutation = useMutation({
+        mutationFn: createProducer,
+        onSuccess: () => {
+            message.success('Производитель создан')
+            queryClient.invalidateQueries({queryKey: ['producers']})
+            closeModal()
+        },
     })
-  }
 
-  const handleProducerClick = (producer: EtProducer, event: React.MouseEvent<HTMLDivElement>) => {
-    // Если зажат Ctrl, добавляем/убираем из выделения
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault()
-      event.stopPropagation()
-      setSelectedProducerIds((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(producer.Id)) {
-          newSet.delete(producer.Id)
-        } else {
-          newSet.add(producer.Id)
+    const updateMutation = useMutation({
+        mutationFn: ({id, payload}: { id: number; payload: Partial<EtProducer> }) =>
+            updateProducer(id, payload),
+        onSuccess: () => {
+            message.success('Изменения сохранены')
+            queryClient.invalidateQueries({queryKey: ['producers']})
+            closeModal()
+        },
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteProducer(id),
+        onSuccess: (_, id) => {
+            message.success('Производитель удалён')
+            queryClient.invalidateQueries({queryKey: ['producers']})
+            if (selectedProducer?.Id === id) {
+                onSelect(null)
+            }
+        },
+    })
+
+    const confirmDelete = (producer: EtProducer) => {
+        Modal.confirm({
+            title: 'Удалить производителя?',
+            content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
+            okText: 'Удалить',
+            cancelText: 'Отмена',
+            okButtonProps: {danger: true, loading: deleteMutation.isPending},
+            onOk: () => deleteMutation.mutate(producer.Id),
+        })
+    }
+
+    const handleProducerClick = (producer: EtProducer, event: React.MouseEvent<HTMLDivElement>) => {
+        // Если зажат Ctrl, добавляем/убираем из выделения
+        if (event.ctrlKey || event.metaKey) {
+            event.preventDefault()
+            event.stopPropagation()
+            setSelectedProducerIds((prev) => {
+                const newSet = new Set(prev)
+                if (newSet.has(producer.Id)) {
+                    newSet.delete(producer.Id)
+                } else {
+                    newSet.add(producer.Id)
+                }
+                return newSet
+            })
+            return
         }
-        return newSet
-      })
-      return
+
+        // Если есть выделенные производители и клик без Ctrl, показываем модальное окно ссылки на оригинал
+        if (selectedProducerIds.size > 0) {
+            event.preventDefault()
+            event.stopPropagation()
+            setLinkTargetProducer(producer)
+            setLinkModalOpen(true)
+            return
+        }
+
+        // Стандартное поведение - выбор производителя
+        if (searchType === 'without_producer') {
+            message.info('Сейчас включён поиск деталей без привязки к производителю.')
+            return
+        }
+        onSelect(producer)
     }
 
-    // Если есть выделенные производители и клик без Ctrl, показываем модальное окно ссылки на оригинал
-    if (selectedProducerIds.size > 0) {
-      event.preventDefault()
-      event.stopPropagation()
-      setLinkTargetProducer(producer)
-      setLinkModalOpen(true)
-      return
+    const handleSubmit = (values: Partial<EtProducer>) => {
+        if (editingProducer) {
+            updateMutation.mutate({id: editingProducer.Id, payload: values})
+        } else {
+            createMutation.mutate(values)
+        }
     }
-
-    // Стандартное поведение - выбор производителя
-    if (searchType === 'without_producer') {
-      message.info('Сейчас включён поиск деталей без привязки к производителю.')
-      return
-    }
-    onSelect(producer)
-  }
-
-  const handleLinkConfirm = () => {
-    if (!linkTargetProducer) {
-      return
-    }
-    const producerIdsArray = Array.from(selectedProducerIds)
-    if (producerIdsArray.length === 0) {
-      return
-    }
-    linkMutation.mutate({
-      producerIds: producerIdsArray,
-      targetProducerId: linkTargetProducer.Id,
-    })
-  }
-
-  const handleSubmit = (values: Partial<EtProducer>) => {
-    if (editingProducer) {
-      updateMutation.mutate({ id: editingProducer.Id, payload: values })
-    } else {
-      createMutation.mutate(values)
-    }
-  }
 
     const handleView = useCallback((producer: EtProducer) => {
         setPreviewProducer(producer)
@@ -405,6 +377,17 @@ export const ProducerPanel = ({
     const handleDelete = useCallback((producer: EtProducer) => {
         confirmDelete(producer)
     }, [])
+
+    const handleLinkClose = useCallback(() => {
+        setLinkModalOpen(false);
+        setLinkTargetProducer(null);
+    }, []);
+
+    const handleLinkSuccess = useCallback(() => {
+        setSelectedProducerIds(new Set());
+        setLinkModalOpen(false);
+        setLinkTargetProducer(null);
+    }, []);
 
     const renderList = () => {
         if (isLoading) {
@@ -452,6 +435,7 @@ export const ProducerPanel = ({
 
                         return (
                             <ProducerRow
+                                key={producer.Id}
                                 producer={producer}
                                 isSelected={selectedProducerIds.has(producer.Id)}
                                 isActive={isActive}
@@ -570,77 +554,13 @@ export const ProducerPanel = ({
                 initialValues={editingProducer ?? {Rating: 0}}
             />
 
-            <Modal
-                title="Ссылка на оригинал"
-                open={linkModalOpen}
-                onOk={handleLinkConfirm}
-                onCancel={() => {
-                    setLinkModalOpen(false)
-                    setLinkTargetProducer(null)
-                }}
-                okText="Связать с оригиналом"
-                cancelText="Отмена"
-                confirmLoading={linkMutation.isPending}
-                width={600}
-            >
-                <Space orientation="vertical" style={{width: '100%'}} size="middle">
-                    <div>
-                        <Typography.Text strong>Выбранные производители для ссылки на оригинал:</Typography.Text>
-                        <div
-                            style={{
-                                marginTop: 8,
-                                maxHeight: 200,
-                                overflow: 'auto',
-                                border: '1px solid #d9d9d9',
-                                borderRadius: 4,
-                                padding: 8
-                            }}
-                        >
-                            {Array.from(selectedProducerIds)
-                                .map((id) => filteredProducers.find((p) => p.Id === id))
-                                .filter(Boolean)
-                                .map((producer) => (
-                                    <div key={producer!.Id} style={{padding: '4px 0'}}>
-                                        <Space>
-                                            <Typography.Text strong>{producer!.Prefix ?? '—'}</Typography.Text>
-                                            <Typography.Text>{producer!.Name ?? '—'}</Typography.Text>
-                                            <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                                (ID: {producer!.Id})
-                                            </Typography.Text>
-                                        </Space>
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <Typography.Text strong>Связать с оригинальным производителем:</Typography.Text>
-                        <div style={{
-                            marginTop: 8,
-                            padding: 12,
-                            background: 'var(--ant-color-fill-tertiary)',
-                            borderRadius: 4
-                        }}>
-                            <Space orientation="vertical" size={4}>
-                                <Typography.Text strong>
-                                    {linkTargetProducer?.Name ?? '—'}
-                                </Typography.Text>
-                                <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                    Префикс: {linkTargetProducer?.Prefix ?? '—'}
-                                </Typography.Text>
-                                <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                    ID: {linkTargetProducer?.Id}
-                                </Typography.Text>
-                            </Space>
-                        </div>
-                    </div>
-
-                    <Typography.Text type="secondary" style={{fontSize: 12}}>
-                        RealId выделенных производителей будет заменен на ID выбранного производителя
-                        ({linkTargetProducer?.Id}).
-                    </Typography.Text>
-                </Space>
-            </Modal>
+            <LinkToOriginalModal open={linkModalOpen}
+                                 selectedProducerIds={selectedProducerIds}
+                                 filteredProducers={filteredProducers}
+                                 linkTargetProducer={linkTargetProducer}
+                                 onSuccess={handleLinkSuccess}
+                                 onCancel={handleLinkClose}
+            />
         </Flex>
     )
 }
