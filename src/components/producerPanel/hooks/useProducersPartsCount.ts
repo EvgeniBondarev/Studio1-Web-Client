@@ -9,7 +9,6 @@ type Props = {
 }
 
 export const useProducersPartsCount = ({producers}: Props) => {
-  // Загружаем количество деталей для каждого производителя
   const queries = useQueries({
     queries: producers.map((producer) => ({
       queryKey: ['producerPartsCount', producer.Id],

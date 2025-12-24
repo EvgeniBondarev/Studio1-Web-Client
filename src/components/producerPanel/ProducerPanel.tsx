@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {useInfiniteQuery, useMutation, useQueries, useQueryClient} from '@tanstack/react-query'
+import {useInfiniteQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {Button, Empty, Flex, message, Modal, Space, Spin, Typography} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
@@ -23,6 +23,7 @@ import {useProducersPartsCount} from './hooks/useProducersPartsCount.ts';
 import {ProducerFilters} from './components/ProducerFilters.tsx';
 import {usePrefixFrequencyMap} from './hooks/usePrefixFrequencyMap.ts';
 import {useFilteredProducers} from './hooks/useFilteredProducers.ts';
+import {useMissingProducers} from './hooks/useMissingProducers.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -122,32 +123,11 @@ export const ProducerPanel = ({
     const allProducers = useMemo(() => producerPages.flatMap((page) => page.items), [producerPages])
 
     // Загружаем производителей по ID из найденных деталей, если они не в текущем списке
-    const missingProducerIds = useMemo(() => {
-        if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-            const existingIds = new Set(allProducers.map((p) => p.Id))
-            return filterProducerIds.filter((id) => !existingIds.has(id))
-        }
-        return []
-    }, [searchType, filterProducerIds, allProducers])
-
-    const missingProducersQueries = useQueries({
-        queries: missingProducerIds.map((producerId) => ({
-            queryKey: ['producer', producerId],
-            queryFn: () => fetchProducerById(producerId),
-            enabled: searchType === 'without_producer' && missingProducerIds.length > 0,
-            staleTime: 5 * 60 * 1000,
-        })),
+    const { missingProducers } = useMissingProducers({
+        allProducers,
+        searchType,
+        filterProducerIds,
     })
-
-    const missingProducers = useMemo(() => {
-        const producers: EtProducer[] = []
-        missingProducersQueries.forEach((query) => {
-            if (query.data) {
-                producers.push(query.data)
-            }
-        })
-        return producers
-    }, [missingProducersQueries])
 
     // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
     const filteredProducers = useFilteredProducers({
@@ -157,6 +137,7 @@ export const ProducerPanel = ({
         filterProducerIds,
     })
 
+    // Загружаем количество деталей для каждого производителя
     const partsCountMap = useProducersPartsCount({producers:filteredProducers})
 
     // Подсчет частоты префиксов
