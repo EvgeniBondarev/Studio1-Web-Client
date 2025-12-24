@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useInfiniteQuery, useMutation, useQueries, useQueryClient} from '@tanstack/react-query'
 import {Button, Empty, Flex, Input, message, Modal, Select, Space, Spin, Typography} from 'antd'
-import {PlusOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined} from '@ant-design/icons'
+import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
 import {
     createProducer, deleteProducer,
@@ -17,8 +17,10 @@ import {EntityFormModal} from '../EntityFormModal.tsx';
 import {producerFields} from '../../config/resources.ts';
 import * as React from 'react';
 import {LinkToOriginalModal} from './LinkToOriginalModal.tsx';
+import {ProducerListHeader} from './ProducerListHeader.tsx';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
+export type SortField = 'prefix' | 'name' | 'count';
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
@@ -67,7 +69,7 @@ export const ProducerPanel = ({
     const [isModalOpen, setModalOpen] = useState(false)
     const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
     const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
-    const [sortField, setSortField] = useState<'prefix' | 'name' | 'count' | null>(null)
+    const [sortField, setSortField] = useState<SortField | null>(null)
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
     const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
     const [linkModalOpen, setLinkModalOpen] = useState(false)
@@ -255,7 +257,7 @@ export const ProducerPanel = ({
         return firstPage?.total
     }, [producerPages])
 
-    const handleSort = (field: 'prefix' | 'name' | 'count') => {
+    const handleSort = (field: SortField) => {
         if (sortField === field) {
             // Переключаем порядок сортировки
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -264,17 +266,6 @@ export const ProducerPanel = ({
             setSortField(field)
             setSortOrder('asc')
         }
-    }
-
-    const renderSortIcon = (field: 'prefix' | 'name' | 'count') => {
-        if (sortField !== field) {
-            return null
-        }
-        return sortOrder === 'asc' ? (
-            <ArrowUpOutlined style={{fontSize: 10, marginLeft: 4}}/>
-        ) : (
-            <ArrowDownOutlined style={{fontSize: 10, marginLeft: 4}}/>
-        )
     }
 
     const closeModal = () => {
@@ -400,32 +391,11 @@ export const ProducerPanel = ({
 
         const listContent = sortedProducers.length ? (
             <>
-                <div className="producer-row producer-row--header">
-                    <Typography.Text
-                        className="producer-row__cell producer-row__cell--prefix"
-                        type="secondary"
-                        style={{cursor: 'pointer', userSelect: 'none'}}
-                        onClick={() => handleSort('prefix')}
-                    >
-                        Префикс {renderSortIcon('prefix')}
-                    </Typography.Text>
-                    <Typography.Text
-                        className="producer-row__cell producer-row__cell--name"
-                        type="secondary"
-                        style={{cursor: 'pointer', userSelect: 'none'}}
-                        onClick={() => handleSort('name')}
-                    >
-                        Название {renderSortIcon('name')}
-                    </Typography.Text>
-                    <Typography.Text
-                        className="producer-row__cell producer-row__cell--count"
-                        type="secondary"
-                        style={{cursor: 'pointer', userSelect: 'none'}}
-                        onClick={() => handleSort('count')}
-                    >
-                        Деталей {renderSortIcon('count')}
-                    </Typography.Text>
-                </div>
+                <ProducerListHeader
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
+                />
                 <div className="producer-list">
                     {sortedProducers.map((producer) => {
 
