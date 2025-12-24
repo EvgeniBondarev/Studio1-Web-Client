@@ -11,17 +11,19 @@ import {
     updateProducer
 } from '../../api/producers.ts';
 import {fetchPartsCount} from '../../api/parts.ts';
-import {ProducerRow} from './ProducerRow.tsx';
+import {ProducerRow} from './components/ProducerRow.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
-import {producerFields} from '../../config/resources.ts';
+import {producerFields, type SearchType} from '../../config/resources.ts';
 import * as React from 'react';
-import {LinkToOriginalModal} from './LinkToOriginalModal.tsx';
-import {ProducerListHeader} from './ProducerListHeader.tsx';
-import {LoadMoreIndicator} from './LoadMoreIndicator.tsx';
+import {LinkToOriginalModal} from './components/LinkToOriginalModal.tsx';
+import {ProducerListHeader} from './components/ProducerListHeader.tsx';
+import {LoadMoreIndicator} from './components/LoadMoreIndicator.tsx';
+import {type PartsCountInfo, useSortedProducers} from './hooks/useSortedProducers.ts';
 
 type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
+export type SortOrder = 'asc' | 'desc';
 const PRODUCER_FILTER_MODE_SESSION_KEY = 'producerFilterMode'
 
 const loadProducerFilterMode = (): ProducerFilterMode => {
@@ -37,7 +39,7 @@ interface ProducerPanelProps {
     onSelect: (producer: EtProducer | null) => void
     externalSearch?: string
     onSearchChange?: (value: string) => void
-    searchType?: 'by_producer' | 'without_producer'
+    searchType?: SearchType
     filterProducerIds?: number[]
 }
 
@@ -71,7 +73,7 @@ export const ProducerPanel = ({
     const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
     const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
     const [sortField, setSortField] = useState<SortField | null>(null)
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+    const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
     const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
     const [linkModalOpen, setLinkModalOpen] = useState(false)
     const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
@@ -167,7 +169,7 @@ export const ProducerPanel = ({
     })
 
     const partsCountMap = useMemo(() => {
-        const map = new Map<number, { value?: number; isLoading: boolean }>()
+        const map = new Map<number, PartsCountInfo>()
         filteredProducers.forEach((producer, index) => {
             const query = partsCountQueries[index]
             map.set(producer.Id, {
@@ -190,40 +192,13 @@ export const ProducerPanel = ({
         return frequencyMap
     }, [filteredProducers])
 
-    const sortedProducers = useMemo(() => {
-        if (!sortField) {
-            return filteredProducers
-        }
 
-        const sorted = [...filteredProducers].sort((a, b) => {
-            let comparison = 0
-
-            switch (sortField) {
-                case 'prefix': {
-                    const prefixA = a.MarketPrefix ?? a.Prefix ?? ''
-                    const prefixB = b.MarketPrefix ?? b.Prefix ?? ''
-                    comparison = prefixA.localeCompare(prefixB, 'ru', {sensitivity: 'base'})
-                    break
-                }
-                case 'name': {
-                    const nameA = a.Name ?? ''
-                    const nameB = b.Name ?? ''
-                    comparison = nameA.localeCompare(nameB, 'ru', {sensitivity: 'base'})
-                    break
-                }
-                case 'count': {
-                    const countA = partsCountMap.get(a.Id)?.value ?? 0
-                    const countB = partsCountMap.get(b.Id)?.value ?? 0
-                    comparison = countA - countB
-                    break
-                }
-            }
-
-            return sortOrder === 'asc' ? comparison : -comparison
-        })
-
-        return sorted
-    }, [filteredProducers, sortField, sortOrder, partsCountMap])
+    const sortedProducers = useSortedProducers({
+        producers: filteredProducers,
+        sortField,
+        sortOrder,
+        partsCountMap,
+    });
 
     // Автоматическая загрузка при прокрутке
     useEffect(() => {
