@@ -22,6 +22,7 @@ import {useSortedProducers} from './hooks/useSortedProducers.ts';
 import {useProducersPartsCount} from './hooks/useProducersPartsCount.ts';
 import {ProducerFilters} from './components/ProducerFilters.tsx';
 import {usePrefixFrequencyMap} from './hooks/usePrefixFrequencyMap.ts';
+import {useFilteredProducers} from './hooks/useFilteredProducers.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -149,16 +150,12 @@ export const ProducerPanel = ({
     }, [missingProducersQueries])
 
     // Объединяем всех производителей и фильтруем по filterProducerIds, если нужно
-    const filteredProducers = useMemo(() => {
-        const combined = [...allProducers, ...missingProducers]
-
-        if (searchType === 'without_producer' && filterProducerIds && filterProducerIds.length > 0) {
-            const filterSet = new Set(filterProducerIds)
-            return combined.filter((producer) => filterSet.has(producer.Id))
-        }
-
-        return combined
-    }, [allProducers, missingProducers, searchType, filterProducerIds])
+    const filteredProducers = useFilteredProducers({
+        allProducers,
+        missingProducers,
+        searchType,
+        filterProducerIds,
+    })
 
     const partsCountMap = useProducersPartsCount({producers:filteredProducers})
 
