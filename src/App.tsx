@@ -1,17 +1,26 @@
-import { useCallback, useEffect, useState } from 'react'
-import { App as AntdApp, Layout, Dropdown, Button, Menu, ConfigProvider, theme } from 'antd'
-import { UserOutlined, LogoutOutlined, AppstoreOutlined, ExperimentOutlined, SettingOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
-import type { MenuProps } from 'antd'
-import type { EtPart, EtProducer, CtUser } from './api/types.ts'
-import { ProducerPanel } from './components/producerPanel'
+import {useCallback, useEffect, useState} from 'react'
+import {App as AntdApp, Layout, Dropdown, Button, Menu, ConfigProvider, theme} from 'antd'
+import {
+  UserOutlined,
+  LogoutOutlined,
+  AppstoreOutlined,
+  ExperimentOutlined,
+  SettingOutlined,
+  MoonOutlined,
+  SunOutlined,
+  DollarOutlined
+} from '@ant-design/icons'
+import type {MenuProps} from 'antd'
+import type {EtPart, EtProducer, CtUser} from './api/types.ts'
+import {ProducerPanel} from './components/producerPanel'
 import {PartsPanel, type SearchType} from './components/partsPanel'
-import { PartDetailsModal } from './components/partDetailsModal'
-import { LoginPage } from './components/LoginPage.tsx'
-import { UserProfileModal } from './components/UserProfileModal.tsx'
-import { fetchProducerById } from './api/producers.ts'
-import { fetchPartsPage, fetchPartsPageWithoutProducer } from './api/parts.ts'
+import {PartDetailsModal} from './components/partDetailsModal'
+import {LoginPage} from './components/LoginPage.tsx'
+import {UserProfileModal} from './components/UserProfileModal.tsx'
+import {fetchProducerById} from './api/producers.ts'
+import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 
-const { Sider, Content } = Layout
+const {Sider, Content} = Layout
 
 const PRODUCER_SEARCH_SESSION_KEY = 'producerPanelSearch'
 const AUTH_USER_KEY = 'authUser'
@@ -184,7 +193,7 @@ const App = () => {
   const handleProducerIdsChange = useCallback((ids: number[]) => {
     setPartsProducerIds((prev) => {
       if (ids.length !== prev.length ||
-          ids.some((id, index) => id !== prev[index])) {
+        ids.some((id, index) => id !== prev[index])) {
         return ids
       }
       return prev
@@ -205,12 +214,12 @@ const App = () => {
       key: 'profile',
       label: (
         <div>
-          <div style={{ fontWeight: 500 }}>{currentUser?.Login}</div>
-          <div style={{ fontSize: 12, color: '#8c8c8c' }}>Профиль</div>
+          <div style={{fontWeight: 500}}>{currentUser?.Login}</div>
+          <div style={{fontSize: 12, color: '#8c8c8c'}}>Профиль</div>
         </div>
       ),
-      icon: <UserOutlined />,
-      onClick: ({ domEvent }) => {
+      icon: <UserOutlined/>,
+      onClick: ({domEvent}) => {
         domEvent.stopPropagation()
         setProfileModalOpen(true)
       },
@@ -221,8 +230,8 @@ const App = () => {
     {
       key: 'theme',
       label: isDarkMode ? 'Светлая тема' : 'Тёмная тема',
-      icon: isDarkMode ? <SunOutlined /> : <MoonOutlined />,
-      onClick: ({ domEvent }) => {
+      icon: isDarkMode ? <SunOutlined/> : <MoonOutlined/>,
+      onClick: ({domEvent}) => {
         domEvent.stopPropagation()
         setIsDarkMode(!isDarkMode)
       },
@@ -233,9 +242,9 @@ const App = () => {
     {
       key: 'logout',
       label: 'Выход',
-      icon: <LogoutOutlined />,
+      icon: <LogoutOutlined/>,
       danger: true,
-      onClick: ({ domEvent }) => {
+      onClick: ({domEvent}) => {
         domEvent.stopPropagation()
         handleLogout()
       },
@@ -246,17 +255,22 @@ const App = () => {
     {
       key: 'producers',
       label: 'Производители',
-      icon: <AppstoreOutlined />,
+      icon: <AppstoreOutlined/>,
+    },
+    {
+      key: 'price',
+      label: 'Цены',
+      icon: <DollarOutlined/>,
     },
     {
       key: 'test1',
       label: 'Тест 1',
-      icon: <ExperimentOutlined />,
+      icon: <ExperimentOutlined/>,
     },
     {
       key: 'test2',
       label: 'Тест 2',
-      icon: <SettingOutlined />,
+      icon: <SettingOutlined/>,
     },
   ]
 
@@ -288,17 +302,17 @@ const App = () => {
     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: isDarkMode
       ? {
-          colorBgBase: '#0f0f0f',
-          colorBgContainer: '#181818',
-          colorBgElevated: '#212121',
-          colorBorder: '#303030',
-          colorBorderSecondary: '#272727',
-          colorText: 'rgba(255, 255, 255, 0.9)',
-          colorTextSecondary: 'rgba(255, 255, 255, 0.7)',
-          colorTextTertiary: 'rgba(255, 255, 255, 0.5)',
-          colorFill: 'rgba(255, 255, 255, 0.1)',
-          colorFillSecondary: 'rgba(255, 255, 255, 0.05)',
-        }
+        colorBgBase: '#0f0f0f',
+        colorBgContainer: '#181818',
+        colorBgElevated: '#212121',
+        colorBorder: '#303030',
+        colorBorderSecondary: '#272727',
+        colorText: 'rgba(255, 255, 255, 0.9)',
+        colorTextSecondary: 'rgba(255, 255, 255, 0.7)',
+        colorTextTertiary: 'rgba(255, 255, 255, 0.5)',
+        colorFill: 'rgba(255, 255, 255, 0.1)',
+        colorFillSecondary: 'rgba(255, 255, 255, 0.05)',
+      }
       : undefined,
   }
 
@@ -306,7 +320,7 @@ const App = () => {
     return (
       <ConfigProvider theme={antdTheme}>
         <AntdApp>
-          <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode} />
+          <LoginPage onLogin={handleLogin} isDarkMode={isDarkMode}/>
         </AntdApp>
       </ConfigProvider>
     )
@@ -315,96 +329,119 @@ const App = () => {
   return (
     <ConfigProvider theme={antdTheme}>
       <AntdApp>
-      <Layout className="app-layout">
-        <Sider
-          width={200}
-          collapsible
-          collapsedWidth={56}
-          theme={isDarkMode ? 'dark' : 'light'}
-          className="navigation-sider"
-          collapsed={navCollapsed}
-          onCollapse={(collapsed) => setNavCollapsed(collapsed)}
-        >
-          <div className="navigation-sider__content">
-            <div
-              style={{
-                padding: navCollapsed ? '16px 8px' : '16px',
-                textAlign: 'center',
-                borderBottom: `1px solid ${isDarkMode ? '#303030' : '#e5e7eb'}`,
-              }}
-            >
-              <img
-                src="/logo.svg"
-                alt="Logo"
-                style={{
-                  height: navCollapsed ? 40 : 60,
-                  width: 'auto',
-                  maxWidth: '100%',
-                }}
-              />
-            </div>
-            <Menu
-              mode="inline"
-              selectedKeys={[activeTab]}
-              items={navItems}
-              onClick={({ key }) => setActiveTab(key)}
-              style={{ borderInlineEnd: 'none' }}
-            />
-            <div className="navigation-sider__footer">
-              <Dropdown menu={{ items: profileMenuItems }} placement="topRight">
-                <Button type="text" icon={<UserOutlined />} title={currentUser.Login} />
-              </Dropdown>
-            </div>
-          </div>
-        </Sider>
-        <Layout>
+        <Layout className="app-layout">
           <Sider
-            width={producerSiderWidth}
+            width={200}
+            collapsible
+            collapsedWidth={56}
             theme={isDarkMode ? 'dark' : 'light'}
-            className="splitter"
+            className="navigation-sider"
+            collapsed={navCollapsed}
+            onCollapse={(collapsed) => setNavCollapsed(collapsed)}
           >
-            <div style={{ padding: 16, height: '100%', overflow: 'hidden' }}>
-            <ProducerPanel
-              selectedProducer={selectedProducer}
-              onSelect={(producer) => {
-                setSelectedProducer(producer)
-                setSelectedPart(null)
-              }}
-                externalSearch={producerSearch}
-                onSearchChange={setProducerSearch}
-                searchType={partsSearchType}
-                filterProducerIds={partsSearchType === 'without_producer' ? partsProducerIds : undefined}
-            />
-          </div>
-            <div
-              className="splitter-resizer"
-              onMouseDown={handleProducerSiderResizeMouseDown}
-            />
-        </Sider>
-        <Layout>
-            <Content style={{ padding: 16, height: '100%', overflow: 'hidden' }}>
-            <PartsPanel
-              producer={selectedProducer}
-              selectedPart={selectedPart}
-              onSelectPart={(part) => setSelectedPart(part)}
-              onSearchTypeChange={handleSearchTypeChange}
-              onProducerIdsChange={handleProducerIdsChange}
-              autoEditPart={autoEditPart}
-              onAutoEditProcessed={() => setAutoEditPart(null)}
-              initialSearch={initialPartsSearch}
-              initialSearchType={initialPartsSearchType}
-            />
-          </Content>
+            <div className="navigation-sider__content">
+              <div
+                style={{
+                  padding: navCollapsed ? '16px 8px' : '16px',
+                  textAlign: 'center',
+                  borderBottom: `1px solid ${isDarkMode ? '#303030' : '#e5e7eb'}`,
+                }}
+              >
+                <img
+                  src="/logo.svg"
+                  alt="Logo"
+                  style={{
+                    height: navCollapsed ? 40 : 60,
+                    width: 'auto',
+                    maxWidth: '100%',
+                  }}
+                />
+              </div>
+              <Menu
+                mode="inline"
+                selectedKeys={[activeTab]}
+                items={navItems}
+                onClick={({key}) => setActiveTab(key)}
+                style={{borderInlineEnd: 'none'}}
+              />
+              <div className="navigation-sider__footer">
+                <Dropdown menu={{items: profileMenuItems}} placement="topRight">
+                  <Button type="text" icon={<UserOutlined/>} title={currentUser.Login}/>
+                </Dropdown>
+              </div>
+            </div>
+          </Sider>
+          <Layout>
+            {activeTab === 'producers' ? (
+              <Layout>
+                <Sider
+                  width={producerSiderWidth}
+                  theme={isDarkMode ? 'dark' : 'light'}
+                  className="splitter"
+                >
+                  <div style={{padding: 16, height: '100%', overflow: 'hidden'}}>
+                    <ProducerPanel
+                      selectedProducer={selectedProducer}
+                      onSelect={(producer) => {
+                        setSelectedProducer(producer)
+                        setSelectedPart(null)
+                      }}
+                      externalSearch={producerSearch}
+                      onSearchChange={setProducerSearch}
+                      searchType={partsSearchType}
+                      filterProducerIds={partsSearchType === 'without_producer' ? partsProducerIds : undefined}
+                    />
+                  </div>
+                  <div
+                    className="splitter-resizer"
+                    onMouseDown={handleProducerSiderResizeMouseDown}
+                  />
+                </Sider>
+                <Layout>
+                  <Content style={{padding: 16, height: '100%', overflow: 'hidden'}}>
+                    <PartsPanel
+                      producer={selectedProducer}
+                      selectedPart={selectedPart}
+                      onSelectPart={(part) => setSelectedPart(part)}
+                      onSearchTypeChange={handleSearchTypeChange}
+                      onProducerIdsChange={handleProducerIdsChange}
+                      autoEditPart={autoEditPart}
+                      onAutoEditProcessed={() => setAutoEditPart(null)}
+                      initialSearch={initialPartsSearch}
+                      initialSearchType={initialPartsSearchType}
+                    />
+                  </Content>
+                </Layout>
+              </Layout>
+            ) : activeTab === 'price' ? (
+              <Layout>
+                <Content style={{padding: 24}}>
+                  <h2>Цены</h2>
+                </Content>
+              </Layout>
+            ) : activeTab === 'test1' ? (
+              <Layout>
+                <Content style={{padding: 24}}>
+                  <h2>Тест 1</h2>
+                </Content>
+              </Layout>
+            ) : (
+              <Layout>
+                <Content style={{padding: 24}}>
+                  <h2>Тест 2</h2>
+                </Content>
+              </Layout>
+            )}
           </Layout>
         </Layout>
-      </Layout>
 
-      <PartDetailsModal producer={selectedProducer} part={selectedPart} onClose={() => setSelectedPart(null)} />
-      <UserProfileModal
-        user={currentUser}
-        open={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-      />
+        <PartDetailsModal producer={selectedProducer} part={selectedPart}
+                          onClose={() => setSelectedPart(null)}/>
+        <UserProfileModal
+          user={currentUser}
+          open={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+        />
       </AntdApp>
     </ConfigProvider>
   )
