@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
-import {PartDetailsModal} from '../partDetailsModal/PartDetailsModal.tsx';
+import {PartDetailsModal} from '../partDetailsModal';
 import {PartFormModal} from './components/partFormModal';
 import {PartsHeader} from './components/PartsHeader.tsx';
 import {PartsSearch} from './components/PartsSearch.tsx';
