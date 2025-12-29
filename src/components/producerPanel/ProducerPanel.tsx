@@ -12,7 +12,6 @@ import {ProducerRow} from './components/ProducerRow.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
 import {producerFields, type SearchType} from '../../config/resources.ts';
-import * as React from 'react';
 import {LinkToOriginalModal} from './components/LinkToOriginalModal.tsx';
 import {ProducerListHeader} from './components/ProducerListHeader.tsx';
 import {LoadMoreIndicator} from './components/LoadMoreIndicator.tsx';
@@ -24,6 +23,7 @@ import {useFilteredProducers} from './hooks/useFilteredProducers.ts';
 import {useMissingProducers} from './hooks/useMissingProducers.ts';
 import {useProducerPages} from './hooks/useProducerPages.ts';
 import {useInfiniteScroll} from '../hooks/useInfiniteScroll.ts';
+import {useProducerSelection} from './hooks/useProducerSelection.tsx';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -78,18 +78,30 @@ export const ProducerPanel = ({
     const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
     const [sortField, setSortField] = useState<SortField | null>(null)
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-    const [selectedProducerIds, setSelectedProducerIds] = useState<Set<number>>(new Set())
     const [linkModalOpen, setLinkModalOpen] = useState(false)
     const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
     const queryClient = useQueryClient()
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
-    // Очищаем выделение при изменении режима поиска
+    const {
+        selectedProducerIds,
+        clearSelection,
+        handleProducerClick,
+    } = useProducerSelection({
+        searchType,
+        selectedProducer,
+        onSelect,
+        onLinkRequested: (producer) => {
+            setLinkTargetProducer(producer)
+            setLinkModalOpen(true)
+        },
+    })
+
     useEffect(() => {
         if (searchType === 'without_producer') {
-            setSelectedProducerIds(new Set())
+            clearSelection()
         }
-    }, [searchType])
+    }, [searchType, clearSelection])
 
     // Пагинированная загрузка списка производителей
     const {
@@ -202,40 +214,6 @@ export const ProducerPanel = ({
         })
     }
 
-    const handleProducerClick = (producer: EtProducer, event: React.MouseEvent<HTMLDivElement>) => {
-        // Если зажат Ctrl, добавляем/убираем из выделения
-        if (event.ctrlKey || event.metaKey) {
-            event.preventDefault()
-            event.stopPropagation()
-            setSelectedProducerIds((prev) => {
-                const newSet = new Set(prev)
-                if (newSet.has(producer.Id)) {
-                    newSet.delete(producer.Id)
-                } else {
-                    newSet.add(producer.Id)
-                }
-                return newSet
-            })
-            return
-        }
-
-        // Если есть выделенные производители и клик без Ctrl, показываем модальное окно ссылки на оригинал
-        if (selectedProducerIds.size > 0) {
-            event.preventDefault()
-            event.stopPropagation()
-            setLinkTargetProducer(producer)
-            setLinkModalOpen(true)
-            return
-        }
-
-        // Стандартное поведение - выбор производителя
-        if (searchType === 'without_producer') {
-            message.info('Сейчас включён поиск деталей без привязки к производителю.')
-            return
-        }
-        onSelect(producer)
-    }
-
     const handleSubmit = (values: Partial<EtProducer>) => {
         if (editingProducer) {
             updateMutation.mutate({id: editingProducer.Id, payload: values})
@@ -263,7 +241,8 @@ export const ProducerPanel = ({
     }, []);
 
     const handleLinkSuccess = useCallback(() => {
-        setSelectedProducerIds(new Set());
+        // setSelectedProducerIds(new Set());
+        clearSelection()
         setLinkModalOpen(false);
         setLinkTargetProducer(null);
     }, []);
