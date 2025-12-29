@@ -16,7 +16,7 @@ import {ProducerPanel} from './components/producerPanel'
 import {PartsPanel} from './components/partsPanel'
 import {PartDetailsModal} from './components/partDetailsModal'
 import {LoginPage} from './components/LoginPage.tsx'
-import {UserProfileModal} from './components/UserProfileModal.tsx'
+import {UserProfileModal} from './components/userProfileModal'
 import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';

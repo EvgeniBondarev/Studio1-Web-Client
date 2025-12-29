@@ -4,6 +4,8 @@ import dayjs from 'dayjs'
 import {fetchUserDetailsByLogin} from '../../api/users.ts';
 import type {CtUser} from '../../api/types.ts';
 import {UserProfileHeader} from './components/UserProfileHeader.tsx';
+import {DescriptionSection} from './components/DescriptionField.tsx';
+import {useDescriptionFields} from './hooks/useDescriptionFields.ts';
 
 const { Text, Title } = Typography
 
@@ -13,7 +15,7 @@ interface UserProfileModalProps {
   onClose: () => void
 }
 
-const formatDate = (date?: string) => {
+export const formatDate = (date?: string) => {
   if (!date) return null
   const parsed = dayjs(date)
   return parsed.isValid() ? parsed.format('DD.MM.YYYY HH:mm') : null
@@ -24,7 +26,7 @@ export const formatFullName = (firstName?: string, lastName?: string) => {
   return parts.length > 0 ? parts.join(' ') : null
 }
 
-const hasValue = (value: any): boolean => {
+export const hasValue = (value: any): boolean => {
   return value !== undefined && value !== null && value !== ''
 }
 
@@ -38,6 +40,8 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
     queryFn: () => (user?.Login ? fetchUserDetailsByLogin(user.Login) : Promise.resolve(null)),
     enabled: Boolean(user?.Login && open),
   })
+
+  const { contact, main, dates } = useDescriptionFields(userDetails)
 
   return (
     <Modal
@@ -58,8 +62,8 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
         </div>
       ) : userDetails ? (
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-          {/* Заголовок с именем */}
 
+          {/* Заголовок с именем */}
           <UserProfileHeader
             login={userDetails.Login}
             locked={userDetails.Locked}
@@ -71,83 +75,24 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
           <Divider style={{ margin: '16px 0' }} />
 
           {/* Контактная информация */}
-          {(hasValue(userDetails.Email) || hasValue(userDetails.Phones) || hasValue(userDetails.Icq) || hasValue(userDetails.Address)) && (
-            <Descriptions title="Контактная информация" bordered column={1} size="small">
-              {hasValue(userDetails.Email) && (
-                <Descriptions.Item label="Email">
-                  <Text copyable>{userDetails.Email}</Text>
-                </Descriptions.Item>
-              )}
-              {hasValue(userDetails.Phones) && (
-                <Descriptions.Item label="Телефоны">
-                  <Text copyable>{userDetails.Phones}</Text>
-                </Descriptions.Item>
-              )}
-              {hasValue(userDetails.Icq) && (
-                <Descriptions.Item label="ICQ">{userDetails.Icq}</Descriptions.Item>
-              )}
-              {hasValue(userDetails.Address) && (
-                <Descriptions.Item label="Адрес">{userDetails.Address}</Descriptions.Item>
-              )}
-            </Descriptions>
-          )}
+          <DescriptionSection
+            title="Контактная информация"
+            fields={contact}
+          />
 
-          {/* Основные параметры */}
-          <Descriptions title="Основные параметры" bordered column={2} size="small">
-            <Descriptions.Item label="ID">{userDetails.Id}</Descriptions.Item>
-            {hasValue(userDetails.Region) && (
-              <Descriptions.Item label="Регион">{userDetails.Region}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.Coef) && (
-              <Descriptions.Item label="Коэффициент">{userDetails.Coef}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.CurrencyId) && (
-              <Descriptions.Item label="Валюта">{userDetails.CurrencyId}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.UserType) && (
-              <Descriptions.Item label="Тип пользователя">{userDetails.UserType}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.OrganisationType) && (
-              <Descriptions.Item label="Тип организации">{userDetails.OrganisationType}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.Manager) && (
-              <Descriptions.Item label="Менеджер" span={2}>
-                {userDetails.Manager}
-              </Descriptions.Item>
-            )}
-            {hasValue(userDetails.Inn) && (
-              <Descriptions.Item label="ИНН">{userDetails.Inn}</Descriptions.Item>
-            )}
-            {hasValue(userDetails.Kpp) && (
-              <Descriptions.Item label="КПП">{userDetails.Kpp}</Descriptions.Item>
-            )}
-          </Descriptions>
+           {/*Основные параметры */}
+          <DescriptionSection
+            title="Основные параметры"
+            column={2}
+            fields={main}
+          />
 
           {/* Даты */}
-          {(formatDate(userDetails.Date) || formatDate(userDetails.BirthDate) || formatDate(userDetails.LastActivity)) && (
-            <Descriptions title="Даты" bordered column={2} size="small">
-              {formatDate(userDetails.Date) && (
-                <Descriptions.Item label="Дата регистрации">
-                  {formatDate(userDetails.Date)}
-                </Descriptions.Item>
-              )}
-              {formatDate(userDetails.BirthDate) && (
-                <Descriptions.Item label="Дата рождения">
-                  {formatDate(userDetails.BirthDate)}
-                </Descriptions.Item>
-              )}
-              {formatDate(userDetails.LastActivity) && (
-                <Descriptions.Item label="Последняя активность">
-                  {formatDate(userDetails.LastActivity)}
-                </Descriptions.Item>
-              )}
-              {hasValue(userDetails.LastArea) && (
-                <Descriptions.Item label="Последняя область">
-                  {userDetails.LastArea}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          )}
+          <DescriptionSection
+            title="Даты"
+            column={2}
+            fields={dates}
+          />
 
           {/* Внешние системы - показываем только активные */}
           {(hasValue(userDetails.ExtId) || 
