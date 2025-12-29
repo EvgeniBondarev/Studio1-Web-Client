@@ -1,13 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {useMutation, useQueryClient} from '@tanstack/react-query'
-import {Button, Empty, Flex, message, Modal, Space, Spin, Typography} from 'antd'
+import {Button, Empty, Flex, message, Space, Spin, Typography} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
-import {
-    createProducer, deleteProducer,
-    fetchProducerById,
-    updateProducer
-} from '../../api/producers.ts';
+import {fetchProducerById,} from '../../api/producers.ts';
 import {ProducerRow} from './components/ProducerRow.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
@@ -24,6 +19,7 @@ import {useMissingProducers} from './hooks/useMissingProducers.ts';
 import {useProducerPages} from './hooks/useProducerPages.ts';
 import {useInfiniteScroll} from '../hooks/useInfiniteScroll.ts';
 import {useProducerSelection} from './hooks/useProducerSelection.tsx';
+import {useProducerMutations} from './hooks/useProducerMutations.ts';
 
 export type ProducerFilterMode = 'all' | 'originals' | 'non-originals' | 'with-prefix'
 export type SortField = 'prefix' | 'name' | 'count';
@@ -80,7 +76,6 @@ export const ProducerPanel = ({
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
     const [linkModalOpen, setLinkModalOpen] = useState(false)
     const [linkTargetProducer, setLinkTargetProducer] = useState<EtProducer | null>(null)
-    const queryClient = useQueryClient()
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
     const {
@@ -173,52 +168,25 @@ export const ProducerPanel = ({
         setEditingProducer(null)
     }
 
-    const createMutation = useMutation({
-        mutationFn: createProducer,
-        onSuccess: () => {
-            message.success('Производитель создан')
-            queryClient.invalidateQueries({queryKey: ['producers']})
-            closeModal()
-        },
-    })
-
-    const updateMutation = useMutation({
-        mutationFn: ({id, payload}: { id: number; payload: Partial<EtProducer> }) =>
-            updateProducer(id, payload),
-        onSuccess: () => {
-            message.success('Изменения сохранены')
-            queryClient.invalidateQueries({queryKey: ['producers']})
-            closeModal()
-        },
-    })
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => deleteProducer(id),
-        onSuccess: (_, id) => {
-            message.success('Производитель удалён')
-            queryClient.invalidateQueries({queryKey: ['producers']})
+    const {
+        createProducer,
+        updateProducer,
+        confirmDelete,
+        isSaving,
+    } = useProducerMutations({
+        onAfterSave: closeModal,
+        onDeleted: (id) => {
             if (selectedProducer?.Id === id) {
                 onSelect(null)
             }
         },
     })
 
-    const confirmDelete = (producer: EtProducer) => {
-        Modal.confirm({
-            title: 'Удалить производителя?',
-            content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
-            okText: 'Удалить',
-            cancelText: 'Отмена',
-            okButtonProps: {danger: true, loading: deleteMutation.isPending},
-            onOk: () => deleteMutation.mutate(producer.Id),
-        })
-    }
-
     const handleSubmit = (values: Partial<EtProducer>) => {
         if (editingProducer) {
-            updateMutation.mutate({id: editingProducer.Id, payload: values})
+            updateProducer({id: editingProducer.Id, payload: values})
         } else {
-            createMutation.mutate(values)
+            createProducer(values)
         }
     }
 
@@ -241,7 +209,6 @@ export const ProducerPanel = ({
     }, []);
 
     const handleLinkSuccess = useCallback(() => {
-        // setSelectedProducerIds(new Set());
         clearSelection()
         setLinkModalOpen(false);
         setLinkTargetProducer(null);
@@ -359,7 +326,7 @@ export const ProducerPanel = ({
                 onCancel={closeModal}
                 onSubmit={handleSubmit}
                 fields={producerFields}
-                loading={createMutation.isPending || updateMutation.isPending}
+                loading={isSaving}
                 initialValues={editingProducer ?? {Rating: 0}}
             />
 
