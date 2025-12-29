@@ -1,8 +1,9 @@
 import { Modal, Descriptions, Spin, Tag, Space, Typography, Divider } from 'antd'
 import { useQuery } from '@tanstack/react-query'
-import { fetchUserDetailsByLogin } from '../api/users.ts'
-import type { CtUser } from '../api/types.ts'
 import dayjs from 'dayjs'
+import {fetchUserDetailsByLogin} from '../../api/users.ts';
+import type {CtUser} from '../../api/types.ts';
+import {UserProfileHeader} from './components/UserProfileHeader.tsx';
 
 const { Text, Title } = Typography
 
@@ -18,7 +19,7 @@ const formatDate = (date?: string) => {
   return parsed.isValid() ? parsed.format('DD.MM.YYYY HH:mm') : null
 }
 
-const formatFullName = (firstName?: string, lastName?: string) => {
+export const formatFullName = (firstName?: string, lastName?: string) => {
   const parts = [firstName, lastName].filter(Boolean)
   return parts.length > 0 ? parts.join(' ') : null
 }
@@ -58,24 +59,14 @@ export const UserProfileModal = ({ user, open, onClose }: UserProfileModalProps)
       ) : userDetails ? (
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           {/* Заголовок с именем */}
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              {formatFullName(userDetails.FirstName, userDetails.LastName) || userDetails.Login}
-            </Title>
-            {formatFullName(userDetails.FirstName, userDetails.LastName) && (
-              <Text type="secondary" style={{ fontSize: 14 }}>
-                {userDetails.Login}
-              </Text>
-            )}
-            <div style={{ marginTop: 8 }}>
-              <Tag color={userDetails.Locked ? 'red' : 'green'} style={{ marginRight: 8 }}>
-                {userDetails.Locked ? 'Заблокирован' : 'Активен'}
-              </Tag>
-              {userDetails.ConfirmsEmails && (
-                <Tag color="blue">Email подтвержден</Tag>
-              )}
-            </div>
-          </div>
+
+          <UserProfileHeader
+            login={userDetails.Login}
+            locked={userDetails.Locked}
+            firstName={userDetails.FirstName}
+            lastName={userDetails.LastName}
+            confirmsEmails={userDetails.ConfirmsEmails}
+          />
 
           <Divider style={{ margin: '16px 0' }} />
 
