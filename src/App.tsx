@@ -267,6 +267,24 @@ const App = () => {
     window.addEventListener('mouseup', handleMouseUp)
   }
 
+  const handleSearchTypeChange = useCallback((type: 'by_producer' | 'without_producer') => {
+    setPartsSearchType(type)
+    if (type === 'by_producer') {
+      setPartsProducerIds([])
+    }
+  }, [])
+
+  const handleProducerIdsChange = useCallback((ids: number[]) => {
+    setPartsProducerIds((prev) => {
+      // Сравниваем массивы, чтобы избежать лишних обновлений
+      if (ids.length !== prev.length || 
+          ids.some((id: number, index: number) => id !== prev[index])) {
+        return ids
+      }
+      return prev
+    })
+  }, [])
+
   const antdTheme = {
     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: isDarkMode
@@ -370,26 +388,12 @@ const App = () => {
               producer={selectedProducer}
               selectedPart={selectedPart}
               onSelectPart={(part) => setSelectedPart(part)}
-                onSearchTypeChange={useCallback((type: 'by_producer' | 'without_producer') => {
-                  setPartsSearchType(type)
-                  if (type === 'by_producer') {
-                    setPartsProducerIds([])
-                  }
-                }, [])}
-                onProducerIdsChange={useCallback((ids: number[]) => {
-                  setPartsProducerIds((prev) => {
-                    // Сравниваем массивы, чтобы избежать лишних обновлений
-                    if (ids.length !== prev.length || 
-                        ids.some((id: number, index: number) => id !== prev[index])) {
-                      return ids
-                    }
-                    return prev
-                  })
-                }, [])}
-                autoEditPart={autoEditPart}
-                onAutoEditProcessed={() => setAutoEditPart(null)}
-                initialSearch={initialPartsSearch}
-                initialSearchType={initialPartsSearchType}
+              onSearchTypeChange={handleSearchTypeChange}
+              onProducerIdsChange={handleProducerIdsChange}
+              autoEditPart={autoEditPart}
+              onAutoEditProcessed={() => setAutoEditPart(null)}
+              initialSearch={initialPartsSearch}
+              initialSearchType={initialPartsSearchType}
             />
           </Content>
           </Layout>

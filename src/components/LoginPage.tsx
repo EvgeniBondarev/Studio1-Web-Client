@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, Input, Button, Card, Typography, message } from 'antd'
+import { Form, Input, Button, Card, Typography, App } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { authenticateUser } from '../api/users.ts'
 import type { CtUser } from '../api/types.ts'
@@ -12,6 +12,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage = ({ onLogin, isDarkMode = false }: LoginPageProps) => {
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (values: { login: string; password: string }) => {
