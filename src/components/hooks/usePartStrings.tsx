@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { Spin } from 'antd'
 import {fetchStringsByIds} from '../../api/parts.ts';
 
 export const usePartStrings = (producerId?: number, ids?: (number | undefined)[]) => {
@@ -17,7 +16,7 @@ export const usePartStrings = (producerId?: number, ids?: (number | undefined)[]
     const getText = (id?: number) => {
         if (!id) return '—'
         if (strings[id]) return strings[id]
-        return isFetching ? <Spin size="small" /> : id
+        return isFetching ? 'Загрузка...' : id
     }
 
     return { strings, isFetching, getText }
