@@ -8,7 +8,7 @@ import {
   SettingOutlined,
   MoonOutlined,
   SunOutlined,
-  DollarOutlined
+  DollarOutlined, ApartmentOutlined
 } from '@ant-design/icons'
 import type {MenuProps} from 'antd'
 import type {EtPart, EtProducer, CtUser} from './api/types.ts'
@@ -20,6 +20,7 @@ import {UserProfileModal} from './components/userProfileModal'
 import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';
+import {CrossCodePage} from './components/CrossCodePage.tsx';
 
 const {Sider, Content} = Layout
 
@@ -264,6 +265,11 @@ const App = () => {
       icon: <DollarOutlined/>,
     },
     {
+      key: 'crossCode',
+      label: 'Кросс-коды',
+      icon: <ApartmentOutlined/>,
+    },
+    {
       key: 'test1',
       label: 'Тест 1',
       icon: <ExperimentOutlined/>,
@@ -420,6 +426,8 @@ const App = () => {
                   <h2>Цены</h2>
                 </Content>
               </Layout>
+            ) : activeTab === 'crossCode' ? (
+             <CrossCodePage/>
             ) : activeTab === 'test1' ? (
               <Layout>
                 <Content style={{padding: 24}}>
