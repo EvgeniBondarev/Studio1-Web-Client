@@ -143,33 +143,6 @@ export const fetchStringsByIds = async (
   return result
 }
 
-export const fetchStringById = async (
-    producerId: number,
-    idStr: number
-): Promise<string | null> => {
-  if (!producerId || !idStr) {
-    return null;
-  }
-
-  try {
-    const response = await odataClient.list<EtStringEntry>('Strings', {
-      filter: `ProducerId eq ${producerId} and IdStr eq ${idStr}`,
-      select: 'Text',
-      top: 1
-    });
-
-    if (response.value && response.value.length > 0) {
-      const text = response.value[0].Text?.trim();
-      return text || null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error fetching string:', error);
-    return null;
-  }
-};
-
 export const createPart = (payload: Partial<EtPart>) => odataClient.create<EtPart>('Parts', payload)
 
 export const updatePart = (id: number, payload: Partial<EtPart>) =>

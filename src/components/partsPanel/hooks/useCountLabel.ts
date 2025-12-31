@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import type { SearchType } from '../PartsPanel.tsx';
 import type { EtPart, EtProducer } from '../../../api/types.ts';
+import type {SearchType} from '../../../config/resources.ts';
 
 interface UseCountLabelProps {
     searchType: SearchType;

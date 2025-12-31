@@ -1,7 +1,8 @@
-import {type MouseEvent, useEffect, useRef, useState} from 'react'
+import {type MouseEvent, useRef, useState} from 'react'
 import {Empty, Flex, Spin, Table, Typography} from 'antd'
 import type {EtPart} from '../../../api/types.ts'
 import {type ContextMenuAction, type ContextMenuPosition, PartsContextMenu} from './PartsContextMenu.tsx'
+import {useInfiniteScroll} from '../../hooks/useInfiniteScroll.ts';
 
 interface PartsTableProps {
     parts: EtPart[]
@@ -37,31 +38,13 @@ export const PartsTable = ({
     const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
-    // Автоматическая загрузка при прокрутке
-    useEffect(() => {
-        if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) {
-            return
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-                    fetchNextPage()
-                }
-            },
-            {
-                root: null,
-                rootMargin: '100px',
-                threshold: 0.1,
-            },
-        )
-
-        observer.observe(loadMoreRef.current)
-
-        return () => {
-            observer.disconnect()
-        }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  // Автоматическая загрузка при прокрутке
+  useInfiniteScroll({
+    loadMoreRef,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  })
 
     const renderBody = () => {
         if (initialLoading) {

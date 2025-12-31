@@ -4,14 +4,13 @@ import {Col, Form, Input, Modal, Row, Tabs} from 'antd'
 import dayjs from 'dayjs'
 import type {EtPart} from '../../../../api/types.ts'
 import {fetchSessionById} from '../../../../api/sessions.ts'
-import {fetchStringById} from '../../../../api/parts.ts';
 import {fetchProductByBrandAndArticle} from '../../../../api/partByBrandArticle.ts';
 import {DataTab} from './dataTab/DataTab.tsx';
-
 import {ImagesTab} from './imageTab/ImagesTab.tsx';
 import {LeftCol} from './formColumns/LeftCol.tsx';
 import {RightCol} from './formColumns/RightCol.tsx';
 import {DetailsTab} from './detailsTab/DetailsTab.tsx';
+import {usePartStrings} from '../../../hooks/usePartStrings.tsx';
 
 interface PartFormModalProps {
     open: boolean
@@ -59,11 +58,7 @@ export const PartFormModal = ({
         enabled: Boolean(brand && initialValues?.Code),
     })
 
-    const {data: descriptionText} = useQuery({
-        queryKey: ['stringDescription', initialValues?.Description],
-        queryFn: () => fetchStringById(initialValues?.ProducerId ?? 0, initialValues?.Description ?? 0),
-        enabled: Boolean(initialValues?.Description && initialValues?.ProducerId),
-    })
+    const { getText } = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
 
     useEffect(() => {
         if (!open) {
@@ -72,15 +67,18 @@ export const PartFormModal = ({
         }
 
         if (initialValues) {
+            const description = getText(initialValues.Name)
             form.setFieldsValue({
                 ...initialValues,
-                DescriptionText: descriptionText || ''
+                DescriptionText: (description && typeof description === 'string')
+                  ? description
+                  : ''
             })
             return
         }
 
         form.resetFields()
-    }, [open, initialValues, descriptionText, form])
+    }, [open, initialValues, getText, form])
 
 
     const handleOk = async () => {
@@ -104,7 +102,10 @@ export const PartFormModal = ({
         {
             key: 'images',
             label: 'Изображение',
-            content: <ImagesTab images={PRdata?.Images} isLoading={isLoading}/>
+            content: <ImagesTab prImages={PRdata?.Images}
+                                prIsLoading={isLoading}
+                                code={initialValues?.Code ?? ''}
+                                producerId={initialValues?.ProducerId?.toString() ?? ''}/>
         },
         {
             key: 'pr_data',
