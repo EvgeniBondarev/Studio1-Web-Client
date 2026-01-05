@@ -8,7 +8,8 @@ import {
 } from '../../../api/parts.ts';
 import { fetchProducerById } from '../../../api/producers.ts';
 import type {EtProducer} from '../../../api/types.ts';
-import type {CodeFilterMode, SearchType} from '../PartsPanel.tsx';
+import type {CodeFilterMode} from '../PartsPanel.tsx';
+import type {SearchType} from '../../../config/resources.ts';
 
 
 interface UsePartsDataProps {

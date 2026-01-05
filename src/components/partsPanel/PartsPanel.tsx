@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
-import {PartDetailsDrawer} from '../PartDetailsDrawer.tsx';
+import {PartDetailsModal} from '../partDetailsModal';
 import {PartFormModal} from './components/partFormModal';
 import {PartsHeader} from './components/PartsHeader.tsx';
 import {PartsSearch} from './components/PartsSearch.tsx';
@@ -14,8 +14,8 @@ import {usePartFormModal} from './hooks/usePartFormModal.ts';
 import {useCopyToClipboard} from './hooks/useCopyToClipboard.ts';
 import {useCountLabel} from './hooks/useCountLabel.ts';
 import {useSearchNormalization} from './hooks/useSearchNormalization.ts';
+import type {SearchType} from '../../config/resources.ts';
 
-export type SearchType = 'by_producer' | 'without_producer'
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
 
 interface PartsPanelProps {
@@ -224,7 +224,7 @@ export const PartsPanel = ({
                 />
             )}
 
-            <PartDetailsDrawer producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
+            <PartDetailsModal producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
 
             <PartFormModal
                 open={isModalOpen}
