@@ -1,8 +1,11 @@
 import type {DescriptionField} from '../components/DescriptionField.tsx';
 import type { CtUserDetails} from '../../../api/types.ts';
-import {formatDate} from '../UserProfileModal.tsx';
+import {useFormatDate} from '../../hooks/useFormatDate.ts';
+
 
 export const useDescriptionFields = (user?: CtUserDetails | null) => {
+  const { formatDate } = useFormatDate();
+
   if (!user) {
     return {
       contact: [],

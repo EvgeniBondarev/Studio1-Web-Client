@@ -1,6 +1,5 @@
 import { Modal, Descriptions, Spin, Tag, Space, Typography, Divider } from 'antd'
 import { useQuery } from '@tanstack/react-query'
-import dayjs from 'dayjs'
 import {fetchUserDetailsByLogin} from '../../api/users.ts';
 import type {CtUser} from '../../api/types.ts';
 import {UserProfileHeader} from './components/UserProfileHeader.tsx';
@@ -13,12 +12,6 @@ interface UserProfileModalProps {
   user: CtUser | null
   open: boolean
   onClose: () => void
-}
-
-export const formatDate = (date?: string) => {
-  if (!date) return null
-  const parsed = dayjs(date)
-  return parsed.isValid() ? parsed.format('DD.MM.YYYY HH:mm') : null
 }
 
 export const formatFullName = (firstName?: string, lastName?: string) => {

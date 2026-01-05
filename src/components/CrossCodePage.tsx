@@ -1,72 +1,87 @@
-import {Layout} from 'antd';
-import {useQuery} from '@tanstack/react-query';
-import {findTreeByCode, getPartialTree, type TreeNode} from '../api/crossCode.ts';
-import {useState} from 'react';
-const {Content} = Layout;
+import {Layout, Tree, Input, Spin, Empty, message} from 'antd'
+import {useQuery} from '@tanstack/react-query'
+import {useEffect, useState} from 'react'
+import {findTreeByCode, type CrossTree} from '../api/crossCode'
+import {useFormatDate} from './hooks/useFormatDate.ts';
+
+const {Content} = Layout
 
 export const CrossCodePage = () => {
-  const [inputCode, setInputCode] = useState('');
-  const [progress, setProgress] = useState(0);
-  const [partialTree, setPartialTree] = useState<TreeNode[] | null>(null);
+  const [inputValue, setInputValue] = useState('')
+  const [mainCode, setMainCode] = useState('')
+  const { formatDate } = useFormatDate();
 
-  const { data: tree, isLoading } = useQuery({
-    queryKey: ['CrTCrosses', inputCode],
-    queryFn: () => findTreeByCode(inputCode.trim(), (loaded, mainCode) => {
-      setProgress(loaded);
-      if (mainCode) {
-        setPartialTree(getPartialTree(mainCode));
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setMainCode(inputValue.trim())
+    }, 1000)
+
+    return () => clearTimeout(handler)
+  }, [inputValue])
+
+  const { data: tree, isLoading, isFetching } = useQuery<CrossTree | null>({
+    queryKey: ['cross-tree', mainCode],
+    queryFn: async ({ signal }) => {
+      try {
+        return await findTreeByCode(mainCode, signal)
+      } catch (e) {
+        message.error('Ошибка загрузки кросс-кодов')
+        throw e
       }
-    }),
-    enabled: !!inputCode,
-  });
-
-  const renderTree = (node: TreeNode) => (
-    <li key={node.label}>
-      {node.label}
-      {node.children.length > 0 && (
-        <ul>
-          {node.children.map(renderTree)}
-        </ul>
-      )}
-    </li>
-  );
+    },
+    enabled: !!mainCode.trim(),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  })
 
   return (
     <Layout>
-      <Content style={{padding: 24}}>
-        <div style={{ padding: '20px' }}>
-          <h2>Поиск кросс-кодов</h2>
+      <Content style={{padding: 24, maxWidth: 800}}>
+        <h2>Поиск кросс-кодов</h2>
 
-          <input
-            type="text"
-            value={inputCode}
-            onChange={(e) => {
-              setInputCode(e.target.value);
-              setPartialTree(null); // очищаем дерево при новом вводе
-              setProgress(0);
-            }}
-            placeholder="Введите CrossCode"
-            style={{ padding: '5px', marginRight: '10px' }}
+        <Input.Search
+          placeholder="Введите MainCode"
+          allowClear
+          enterButton="Найти"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onSearch={value => setMainCode(value.trim())}
+          style={{ marginBottom: 20 }}
+        />
+
+        {isLoading || isFetching ? (
+          <Spin/>
+        ) : !tree ? (
+          <Empty description="Ничего не найдено"/>
+        ) : (
+          <Tree
+            defaultExpandAll
+            showLine
+
+            treeData={[
+              {
+                key: tree.mainCode,
+                title: <b>{tree.mainCode}</b>,
+                children: tree.brands.map(brand => ({
+                  key: brand.brandId,
+                  title: `Производитель ${brand.brandId}`,
+                  children: brand.codes.map(code => ({
+                    key: code.id,
+                    title: (
+                      <div style={{ display: 'flex', width: 500}}> {/* можно ширину дерева или maxWidth */}
+                        <div style={{ flex: 1 }}>{code.code}</div>
+                        <div style={{ width: 80, textAlign: 'right'}}>{code.verity}%</div>
+                        <div style={{ width: 200, textAlign: 'right'}}>{formatDate(code.date)}</div>
+                      </div>
+                    )
+
+                  }))
+                }))
+              }
+            ]}
           />
-
-          <button onClick={() => setInputCode(inputCode)} disabled={!inputCode}>
-            Найти
-          </button>
-
-          {isLoading && <p>Загрузка... Подгружено записей: {progress}</p>}
-
-          {!isLoading && !partialTree && !tree && inputCode && (
-            <p>Ничего не найдено</p>
-          )}
-
-          {(tree || partialTree) && (
-            <ul>
-              {(tree ?? partialTree!).map(renderTree)}
-            </ul>
-          )}
-
-        </div>
+        )}
       </Content>
     </Layout>
-  );
-};
+  )
+}
