@@ -1,7 +1,7 @@
 import {Layout, Tree, Input, Spin, Empty, message} from 'antd'
 import {useQuery} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
-import {findTreeByCode, type CrossTree} from '../api/crossCode'
+import {findTreeByCode, type CrossTree, fetchAllByMainCode} from '../api/crossCode'
 import {useFormatDate} from './hooks/useFormatDate.ts';
 
 const {Content} = Layout
@@ -18,6 +18,19 @@ export const CrossCodePage = () => {
 
     return () => clearTimeout(handler)
   }, [inputValue])
+
+  const { data: all} = useQuery<any>({
+    queryKey: ['cross-all', mainCode],
+    queryFn: async ({ signal }) => {
+        return await fetchAllByMainCode(mainCode, signal)
+    },
+    enabled: !!mainCode.trim(),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  })
+
+  console.log(all)
+
 
   const { data: tree, isLoading, isFetching } = useQuery<CrossTree | null>({
     queryKey: ['cross-tree', mainCode],

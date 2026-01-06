@@ -33,20 +33,62 @@ export type CrossTree = {
   brands: BrandNode[]
 }
 
-
-
-async function fetchByMainCode(
+export async function fetchAllByMainCode(
   mainCode: string,
   signal?: AbortSignal
 ): Promise<CrossCodeItem[]> {
-  const res = await odataClient.list<CrossCodeItem>(
+  const allItems: CrossCodeItem[] = [];
+
+  // Первый запрос через list
+  const response = await odataClient.list<CrossCodeItem>(
     'CrTCrosses',
     { filter: `MainCode eq '${mainCode}'` },
     { signal }
-  )
+  );
 
-  return res.value
+  if (response.value) {
+    allItems.push(...response.value);
+  }
+
+  // Проверяем наличие nextLink
+  let nextLink = (response as any)['@odata.nextLink'];
+
+  // Запрашиваем последующие страницы
+  while (nextLink) {
+    try {
+      const nextResponse = await odataClient.fetchByUrl<any>(
+        nextLink,
+        { signal }
+      );
+
+      if (nextResponse.value) {
+        allItems.push(...nextResponse.value);
+      }
+
+      // Обновляем nextLink для следующей итерации
+      nextLink = (nextResponse as any)['@odata.nextLink'];
+    } catch (error) {
+      console.error('Ошибка при получении следующей страницы:', error);
+      break;
+    }
+  }
+
+  return allItems;
 }
+
+
+// async function fetchByMainCode(
+//   mainCode: string,
+//   signal?: AbortSignal
+// ): Promise<CrossCodeItem[]> {
+//   const res = await odataClient.list<CrossCodeItem>(
+//     'CrTCrosses',
+//     { filter: `MainCode eq '${mainCode}'` },
+//     { signal }
+//   )
+//
+//   return res.value
+// }
 
 
 export async function buildTree(items: CrossCodeItem[]): Promise<CrossTree | null> {
@@ -100,7 +142,7 @@ export async function findTreeByCode(
   mainCode: string,
   signal?: AbortSignal
 ): Promise<CrossTree | null> {
-  const items = await fetchByMainCode(mainCode.trim(), signal)
+  const items = await fetchAllByMainCode(mainCode.trim(), signal)
   if (!items.length) return null
 
   return buildTree(items)
