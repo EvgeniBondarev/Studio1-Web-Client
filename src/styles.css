@@ -399,3 +399,269 @@ body.ant-dark .ant-select-focused .ant-select-selector {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
+/* Стили для дерева кросс-кодов */
+.cross-tree-container {
+  width: 100%;
+}
+
+.cross-tree {
+  background: transparent;
+  font-size: 13px;
+}
+
+/* Главная строка с кодом и производителем */
+.cross-tree-main-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.cross-tree-main-row:hover {
+  background-color: #f5f5f5;
+}
+
+body.ant-dark .cross-tree-main-row:hover {
+  background-color: #272727;
+}
+
+.cross-tree-main-row__code {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1890ff;
+}
+
+body.ant-dark .cross-tree-main-row__code {
+  color: #69b7ff;
+}
+
+.cross-tree-main-row__producer {
+  color: #595959;
+  font-size: 13px;
+}
+
+body.ant-dark .cross-tree-main-row__producer {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Строка производителя бренда */
+.cross-tree-brand-row {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #595959;
+  font-size: 13px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.cross-tree-brand-row:hover {
+  background-color: #f5f5f5;
+  color: #1890ff;
+}
+
+body.ant-dark .cross-tree-brand-row {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+body.ant-dark .cross-tree-brand-row:hover {
+  background-color: #272727;
+  color: #69b7ff;
+}
+
+/* Строка кода */
+.cross-tree-code-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.cross-tree-code-row:hover {
+  background-color: #f5f5f5;
+}
+
+body.ant-dark .cross-tree-code-row:hover {
+  background-color: #272727;
+}
+
+.cross-tree-code-row__code {
+  font-weight: 500;
+  color: #262626;
+  font-size: 13px;
+  min-width: 150px;
+}
+
+body.ant-dark .cross-tree-code-row__code {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cross-tree-code-row__verity {
+  color: #8c8c8c;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 100px;
+  text-align: left;
+}
+
+body.ant-dark .cross-tree-code-row__verity {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.cross-tree-code-row__date {
+  color: #8c8c8c;
+  font-size: 12px;
+  min-width: 140px;
+  text-align: left;
+}
+
+body.ant-dark .cross-tree-code-row__date {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Стили для узлов дерева */
+.ant-tree-node-content-wrapper {
+  padding: 2px 4px !important;
+  min-height: 32px !important;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.ant-tree-node-content-wrapper:hover {
+  background-color: #f5f5f5 !important;
+}
+
+body.ant-dark .ant-tree-node-content-wrapper:hover {
+  background-color: #272727 !important;
+}
+
+.ant-tree-title {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ant-tree-switcher {
+  width: 24px !important;
+  min-width: 24px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8c8c8c;
+  transition: color 0.2s ease;
+}
+
+.ant-tree-switcher:hover {
+  color: #1890ff;
+}
+
+body.ant-dark .ant-tree-switcher {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+body.ant-dark .ant-tree-switcher:hover {
+  color: #69b7ff;
+}
+
+.ant-tree-switcher-icon {
+  font-size: 12px;
+}
+
+.ant-tree-indent-unit {
+  width: 24px !important;
+}
+
+/* Визуальные линии дерева */
+.ant-tree-show-line .ant-tree-switcher {
+  background: transparent;
+}
+
+.ant-tree-show-line .ant-tree-child-tree > .ant-tree-treenode::before {
+  border-left: 1px solid #d9d9d9;
+  left: 12px;
+}
+
+body.ant-dark .ant-tree-show-line .ant-tree-child-tree > .ant-tree-treenode::before {
+  border-left: 1px solid #434343;
+}
+
+.ant-tree-show-line .ant-tree-treenode::before {
+  border-left: 1px solid #d9d9d9;
+  left: 12px;
+}
+
+body.ant-dark .ant-tree-show-line .ant-tree-treenode::before {
+  border-left: 1px solid #434343;
+}
+
+.ant-tree-show-line .ant-tree-treenode:last-child::before {
+  height: 14px;
+}
+
+.ant-tree-show-line .ant-tree-treenode:not(:last-child)::before {
+  height: 100%;
+}
+
+.ant-tree-show-line .ant-tree-switcher-line-icon {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+body.ant-dark .ant-tree-show-line .ant-tree-switcher-line-icon {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.ant-tree-show-line .ant-tree-switcher-line-icon:hover {
+  color: #1890ff;
+}
+
+body.ant-dark .ant-tree-show-line .ant-tree-switcher-line-icon:hover {
+  color: #69b7ff;
+}
+
+/* Убираем стандартные отступы у дерева */
+.ant-tree-list {
+  padding: 0 !important;
+}
+
+.ant-tree-list-holder {
+  padding: 0 !important;
+}
+
+.ant-tree-list-holder-inner {
+  padding: 0 !important;
+}
+
+/* Убираем вертикальные отступы для вложенных элементов */
+.ant-tree-treenode {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.ant-tree-treenode + .ant-tree-treenode {
+  margin-top: 0 !important;
+}
+
+.ant-tree-child-tree {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.ant-tree-child-tree > .ant-tree-treenode {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background-color: #e6f4ff !important;
+}
+
+body.ant-dark .ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background-color: #272727 !important;
+}
+

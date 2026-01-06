@@ -1,5 +1,7 @@
 import { odataClient } from './odataClient'
 import {fetchProducerById} from './producers.ts';
+import {fetchPartsPageWithoutProducer} from './parts.ts';
+import type {EtProducer} from './types.ts';
 
 export interface CrossCodeItem {
   Id: number
@@ -25,25 +27,31 @@ export type CodeNode = {
 export type BrandNode = {
   brandId: number
   brandName: string
+  producer?: EtProducer
   codes: CodeNode[]
 }
 
 export type CrossTree = {
   mainCode: string
+  mainProducer?: EtProducer
   brands: BrandNode[]
 }
 
+const CROSS_PAGE_SIZE = 500;
+const CROSS_MAX_ITEMS = 2000; // ограничение на количество элементов, чтобы ускорить загрузку
+
 export async function fetchAllByMainCode(
   mainCode: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  maxItems: number = CROSS_MAX_ITEMS,
 ): Promise<CrossCodeItem[]> {
   const allItems: CrossCodeItem[] = [];
 
-  // Первый запрос через list
+  // Первый запрос через list с увеличенным page size
   const response = await odataClient.list<CrossCodeItem>(
     'CrTCrosses',
-    { filter: `MainCode eq '${mainCode}'` },
-    { signal }
+    { filter: `MainCode eq '${mainCode}'`, top: CROSS_PAGE_SIZE },
+    { signal },
   );
 
   if (response.value) {
@@ -53,16 +61,20 @@ export async function fetchAllByMainCode(
   // Проверяем наличие nextLink
   let nextLink = (response as any)['@odata.nextLink'];
 
-  // Запрашиваем последующие страницы
-  while (nextLink) {
+  // Запрашиваем последующие страницы, но не больше maxItems
+  while (nextLink && allItems.length < maxItems) {
     try {
-      const nextResponse = await odataClient.fetchByUrl<any>(
-        nextLink,
-        { signal }
-      );
+      const nextResponse = await odataClient.fetchByUrl<any>(nextLink, { signal });
 
       if (nextResponse.value) {
-        allItems.push(...nextResponse.value);
+        const remaining = maxItems - allItems.length;
+        // Добавляем только то, что помещается в лимит
+        allItems.push(...nextResponse.value.slice(0, remaining));
+      }
+
+      // Если достигли лимита, прекращаем
+      if (allItems.length >= maxItems) {
+        break;
       }
 
       // Обновляем nextLink для следующей итерации
@@ -92,47 +104,69 @@ export async function fetchAllByMainCode(
 
 
 export async function buildTree(items: CrossCodeItem[]): Promise<CrossTree | null> {
-  const rootItem = items.find(i => i.MainCode === i.CrossCode);
-  if (!rootItem) return null;
+  if (!items.length) return null;
+
+  // Главный код - это MainCode из первого элемента
+  const mainCode = items[0].MainCode;
+
+  // Находим деталь по MainCode, чтобы получить ProducerId
+  let mainProducer: EtProducer | undefined;
+  try {
+    const partsPage = await fetchPartsPageWithoutProducer(mainCode, 'exact');
+    const mainPart = partsPage.items.find(p => p.Code === mainCode);
+    if (mainPart?.ProducerId) {
+      mainProducer = await fetchProducerById(mainPart.ProducerId).catch(() => undefined);
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке производителя главного кода:', error);
+  }
 
   const brands = new Map<number, BrandNode>();
 
-  // Собираем уникальные brandId
+  // Собираем уникальные brandId из поля Cross (производитель кросс-кода)
   const brandIds = Array.from(new Set(items.map(i => i.Cross)));
 
   // Загружаем производителей параллельно
   const producers = await Promise.all(
-    brandIds.map(id => fetchProducerById(id))
+    brandIds.map(id => fetchProducerById(id).catch(() => null))
   );
 
-  const producerMap = new Map<number, string>();
-  producers.forEach(p => {
-    producerMap.set(p.Id, p.Name ?? `ID ${p.Id}`);
+  const producerMap = new Map<number, EtProducer>();
+  producers.forEach((p, index) => {
+    if (p) {
+      producerMap.set(brandIds[index], p);
+    }
   });
 
+  // Группируем по производителю (Cross)
   items.forEach(item => {
-    if (item.CrossCode === rootItem.CrossCode) return;
+    const producer = producerMap.get(item.Cross);
+    const name = producer?.Name ?? `ID ${item.Cross}`;
+    const prefix = producer?.Prefix ?? producer?.MarketPrefix ?? name;
+    const brandName = producer 
+      ? `${name.toLowerCase()} (${prefix})`
+      : `ID ${item.Cross}`;
 
-    const brandName = producerMap.get(item.Cross) ?? `ID ${item.Cross}`;
-
-    if (!brands.has(item.By)) {
-      brands.set(item.By, {
-        brandId: item.By,
+    if (!brands.has(item.Cross)) {
+      brands.set(item.Cross, {
+        brandId: item.Cross,
         brandName,
+        producer,
         codes: []
       });
     }
 
-    brands.get(item.By)!.codes.push({
+    brands.get(item.Cross)!.codes.push({
       id: item.Id,
       code: item.CrossCode,
       verity: item.Verity,
-      date: item.Date // если у тебя есть дата
+      date: item.Date
     });
   });
 
   return {
-    mainCode: rootItem.CrossCode,
+    mainCode,
+    mainProducer,
     brands: Array.from(brands.values())
   };
 }
