@@ -20,7 +20,7 @@ import {UserProfileModal} from './components/userProfileModal'
 import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';
-import {CrossCodePage} from './components/CrossCodePage.tsx';
+import {CrossCodePage} from './components/crossCodePage';
 
 const {Sider, Content} = Layout
 
