@@ -17,24 +17,34 @@ export interface CrossCodeItem {
   Date: string
 }
 
-export type CodeNode = {
-  id: number
-  code: string
-  verity: number
-  date: string
+export type ProducerNode = {
+  type: 'producer'
+  cross: number
+  producer?: EtProducer
+  children: CrossTreeNode[]
 }
 
-export type BrandNode = {
-  brandId: number
-  brandName: string
-  producer?: EtProducer
-  codes: CodeNode[]
+
+export type CrossTreeNode = {
+  type: 'code'
+  id: number
+  code: string
+  by: number
+  byCode: string
+  cross: number
+  crossCode: string
+  verity: number
+  date: string
+  children: TreeNode[]
 }
+
+export type TreeNode = ProducerNode | CrossTreeNode
+
 
 export type CrossTree = {
   mainCode: string
   mainProducer?: EtProducer
-  brands: BrandNode[]
+  nodes: TreeNode[]
 }
 
 const CROSS_PAGE_SIZE = 500;
@@ -89,96 +99,157 @@ export async function fetchAllByMainCode(
 }
 
 
-// async function fetchByMainCode(
-//   mainCode: string,
-//   signal?: AbortSignal
-// ): Promise<CrossCodeItem[]> {
-//   const res = await odataClient.list<CrossCodeItem>(
-//     'CrTCrosses',
-//     { filter: `MainCode eq '${mainCode}'` },
-//     { signal }
-//   )
-//
-//   return res.value
-// }
+type IndexKey = string
 
+function makeKey(by: number, byCode: string): IndexKey {
+  return `${by}|${byCode}`
+}
 
-export async function buildTree(items: CrossCodeItem[]): Promise<CrossTree | null> {
-  if (!items.length) return null;
+function indexItems(items: CrossCodeItem[]) {
+  const index = new Map<IndexKey, CrossCodeItem[]>()
 
-  // Главный код - это MainCode из первого элемента
-  const mainCode = items[0].MainCode;
-
-  // Находим деталь по MainCode, чтобы получить ProducerId
-  let mainProducer: EtProducer | undefined;
-  try {
-    const partsPage = await fetchPartsPageWithoutProducer(mainCode, 'exact');
-    const mainPart = partsPage.items.find(p => p.Code === mainCode);
-    if (mainPart?.ProducerId) {
-      mainProducer = await fetchProducerById(mainPart.ProducerId).catch(() => undefined);
+  for (const item of items) {
+    const key = makeKey(item.By, item.ByCode)
+    if (!index.has(key)) {
+      index.set(key, [])
     }
-  } catch (error) {
-    console.error('Ошибка при загрузке производителя главного кода:', error);
+    index.get(key)!.push(item)
   }
 
-  const brands = new Map<number, BrandNode>();
+  return index
+}
 
-  // Собираем уникальные brandId из поля Cross (производитель кросс-кода)
-  const brandIds = Array.from(new Set(items.map(i => i.Cross)));
 
-  // Загружаем производителей параллельно
+
+async function buildNodes(
+  parentBy: number,
+  parentCode: string,
+  index: Map<string, CrossCodeItem[]>,
+  producerMap: Map<number, EtProducer>,
+  visited = new Set<number>()
+): Promise<TreeNode[]> {
+
+  const key = makeKey(parentBy, parentCode)
+  const items = index.get(key) ?? []
+
+  // группируем по Cross (producer)
+  const grouped = new Map<number, CrossCodeItem[]>()
+
+  for (const item of items) {
+    if (!grouped.has(item.Cross)) {
+      grouped.set(item.Cross, [])
+    }
+    grouped.get(item.Cross)!.push(item)
+  }
+
+  const result: TreeNode[] = []
+
+  // producer → crossCode → children
+  for (const [cross, crossItems] of grouped) {
+    const producer = producerMap.get(cross)
+
+    const producerNode: ProducerNode = {
+      type: 'producer',
+      cross,
+      producer,
+      children: []
+    }
+
+    for (const item of crossItems) {
+      if (visited.has(item.Id)) continue
+      visited.add(item.Id)
+
+      const codeNode: CrossTreeNode = {
+        type: 'code',
+        id: item.Id,
+        code: item.CrossCode,
+        by: item.By,
+        byCode: item.ByCode,
+        cross: item.Cross,
+        crossCode: item.CrossCode,
+        verity: item.Verity,
+        date: item.Date,
+        children: []
+      }
+
+      codeNode.children = await buildNodes(
+        item.Cross,
+        item.CrossCode,
+        index,
+        producerMap,
+        visited
+      )
+
+      producerNode.children.push(codeNode)
+    }
+
+    result.push(producerNode)
+  }
+
+  return result
+}
+
+
+export async function buildRecursiveTree(
+  mainCode: string,
+  items: CrossCodeItem[]
+): Promise<CrossTree> {
+  const index = indexItems(items)
+
+  // собираем уникальные producerId
+  const producerIds = Array.from(new Set(items.map(i => i.Cross)))
+
   const producers = await Promise.all(
-    brandIds.map(id => fetchProducerById(id).catch(() => null))
-  );
+    producerIds.map(id => fetchProducerById(id).catch(() => null))
+  )
 
-  const producerMap = new Map<number, EtProducer>();
-  producers.forEach((p, index) => {
-    if (p) {
-      producerMap.set(brandIds[index], p);
+  const producerMap = new Map<number, EtProducer>()
+  producers.forEach((p, i) => {
+    if (p) producerMap.set(producerIds[i], p)
+  })
+
+  const nodes = await buildNodes(
+    0,
+    mainCode,
+    index,
+    producerMap
+  )
+
+  let mainProducer: EtProducer | undefined
+
+  try {
+    const partsPage = await fetchPartsPageWithoutProducer(mainCode, 'exact')
+    const mainPart = partsPage.items.find(p => p.Code === mainCode)
+
+    if (mainPart?.ProducerId) {
+      mainProducer = await fetchProducerById(mainPart.ProducerId)
+        .catch(() => undefined)
     }
-  });
-
-  // Группируем по производителю (Cross)
-  items.forEach(item => {
-    const producer = producerMap.get(item.Cross);
-    const name = producer?.Name ?? `ID ${item.Cross}`;
-    const prefix = producer?.Prefix ?? producer?.MarketPrefix ?? name;
-    const brandName = producer 
-      ? `${name.toLowerCase()} (${prefix})`
-      : `ID ${item.Cross}`;
-
-    if (!brands.has(item.Cross)) {
-      brands.set(item.Cross, {
-        brandId: item.Cross,
-        brandName,
-        producer,
-        codes: []
-      });
-    }
-
-    brands.get(item.Cross)!.codes.push({
-      id: item.Id,
-      code: item.CrossCode,
-      verity: item.Verity,
-      date: item.Date
-    });
-  });
+  } catch (error) {
+    console.error(
+      'Ошибка при загрузке производителя главного кода:',
+      error
+    )
+  }
 
   return {
     mainCode,
     mainProducer,
-    brands: Array.from(brands.values())
-  };
+    nodes
+  }
 }
 
-
-export async function findTreeByCode(
+export async function findCrossTreeByMainCode(
   mainCode: string,
   signal?: AbortSignal
 ): Promise<CrossTree | null> {
-  const items = await fetchAllByMainCode(mainCode.trim(), signal)
-  if (!items.length) return null
+  const items = await fetchAllByMainCode(mainCode, signal)
 
-  return buildTree(items)
+  if (!items.length) {
+    return null
+  }
+
+  return buildRecursiveTree(mainCode, items)
 }
+
 
