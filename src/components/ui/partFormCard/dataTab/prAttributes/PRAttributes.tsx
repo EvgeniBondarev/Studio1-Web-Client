@@ -1,5 +1,5 @@
 import {Descriptions} from 'antd';
-import type {ProductAttribute} from '../../../../../../api/types.ts';
+import type {ProductAttribute} from '../../../../../api/types.ts';
 
 type Props={
     attributes: ProductAttribute[]

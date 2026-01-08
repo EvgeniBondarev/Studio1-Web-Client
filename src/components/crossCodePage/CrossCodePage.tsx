@@ -5,7 +5,7 @@ import {useEffect, useState} from 'react'
 import {fetchPartsPageWithoutProducer, updatePart, createPart, deletePart} from '../../api/parts.ts'
 import {fetchProducerById, updateProducer, createProducer, deleteProducer} from '../../api/producers.ts'
 import {EntityFormModal} from '../EntityFormModal.tsx'
-import {PartFormModal} from '../partsPanel/components/partFormModal'
+import {PartFormModal} from '../partsPanel/components/PartFormModal.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal'
 import {PartDetailsModal} from '../partDetailsModal'
 import {ContextActionsMenu} from '../ContextActionsMenu.tsx'
@@ -15,6 +15,7 @@ import type {EtPart, EtProducer} from '../../api/types.ts'
 import {type DataNode} from 'antd/es/tree';
 
 import {type CrossTree, fetchAllByMainCode, findCrossTreeByMainCode, type TreeNode} from '../../api/crossCode.ts';
+
 
 const {Content} = Layout
 const {Text} = Typography
