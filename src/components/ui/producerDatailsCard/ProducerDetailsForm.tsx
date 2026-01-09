@@ -1,5 +1,6 @@
 import { Form, Input, Typography } from 'antd'
-import type { EtProducer } from '../../api/types.ts'
+import type { EtProducer } from '../../../api/types.ts'
+import {useEffect} from 'react';
 
 interface ProducerDetailsFormProps {
     producer: EtProducer
@@ -15,9 +16,13 @@ export const ProducerDetailsForm = ({ producer, isNonOriginal }: ProducerDetails
     const [form] = Form.useForm<Partial<EtProducer>>()
 
     // Заполняем форму данными при открытии
-    if (producer) {
-        form.setFieldsValue(producer)
-    }
+    useEffect(() => {
+        if (producer) {
+            form.setFieldsValue(producer)
+        } else {
+            form.resetFields()
+        }
+    }, [producer, form])
 
     const fields: ProducerFormField[] = [
         {label: 'ID', name: 'Id'},
@@ -37,7 +42,6 @@ export const ProducerDetailsForm = ({ producer, isNonOriginal }: ProducerDetails
         <Form
             form={form}
             layout="vertical"
-            disabled
             initialValues={producer}
         >
             {fields.map(({label, name}) => {

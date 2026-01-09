@@ -28,7 +28,7 @@ const PRODUCER_SEARCH_SESSION_KEY = 'producerPanelSearch'
 const AUTH_USER_KEY = 'authUser'
 const THEME_KEY = 'appTheme'
 
-const App = () => {
+const AdminApp = () => {
   const [currentUser, setCurrentUser] = useState<CtUser | null>(() => {
     if (typeof window === 'undefined') {
       return null
@@ -456,5 +456,5 @@ const App = () => {
   )
 }
 
-export default App
+export default AdminApp
 
