@@ -335,8 +335,8 @@ export const CrossCodePage = () => {
 
 
   return (
-    <Layout>
-      <Content style={{padding: 24, maxWidth: 1200}}>
+    <Layout className="full-height" >
+      <Content style={{padding: 24, maxWidth: 1200}} className="full-height content-scroll" >
         <h2>Поиск</h2>
 
         <Input.Search

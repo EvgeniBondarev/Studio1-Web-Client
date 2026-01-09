@@ -10,6 +10,7 @@ body,
   min-height: 100vh;
   background-color: #f5f7fb;
   transition: background-color 0.3s ease, color 0.3s ease;
+  height: 100%;
 }
 
 /* Тёмная тема в стиле YouTube */
@@ -24,7 +25,8 @@ body.ant-dark #root {
 }
 
 .app-layout {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* Стили для Header с вкладками */
@@ -663,5 +665,14 @@ body.ant-dark .ant-tree-show-line .ant-tree-switcher-line-icon:hover {
 
 body.ant-dark .ant-tree-node-selected .ant-tree-node-content-wrapper {
   background-color: #272727 !important;
+}
+
+.full-height {
+  height: 100%;
+  min-height: 0;
+}
+
+.content-scroll {
+  overflow-y: auto;
 }
 

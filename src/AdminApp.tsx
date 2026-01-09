@@ -378,7 +378,7 @@ const AdminApp = () => {
               </div>
             </div>
           </Sider>
-          <Layout>
+          <Layout className="full-height">
             {activeTab === 'producers' ? (
               <Layout>
                 <Sider
@@ -386,7 +386,7 @@ const AdminApp = () => {
                   theme={isDarkMode ? 'dark' : 'light'}
                   className="splitter"
                 >
-                  <div style={{padding: 16, height: '100%', overflow: 'hidden'}}>
+                  <div style={{padding: 16}} className="full-height content-scroll">
                     <ProducerPanel
                       selectedProducer={selectedProducer}
                       onSelect={(producer) => {
@@ -404,8 +404,8 @@ const AdminApp = () => {
                     onMouseDown={handleProducerSiderResizeMouseDown}
                   />
                 </Sider>
-                <Layout>
-                  <Content style={{padding: 16, height: '100%', overflow: 'hidden'}}>
+                <Layout className="full-height">
+                  <Content style={{padding: 16}} className="full-height content-scroll">
                     <PartsPanel
                       producer={selectedProducer}
                       selectedPart={selectedPart}
@@ -421,22 +421,22 @@ const AdminApp = () => {
                 </Layout>
               </Layout>
             ) : activeTab === 'price' ? (
-              <Layout>
-                <Content style={{padding: 24}}>
+              <Layout className="full-height">
+                <Content style={{padding: 24}} className="full-height content-scroll">
                   <h2>Цены</h2>
                 </Content>
               </Layout>
             ) : activeTab === 'crossCode' ? (
              <CrossCodePage/>
             ) : activeTab === 'test1' ? (
-              <Layout>
-                <Content style={{padding: 24}}>
+              <Layout className="full-height">
+                <Content style={{padding: 24}} className="full-height content-scroll">
                   <h2>Тест 1</h2>
                 </Content>
               </Layout>
             ) : (
-              <Layout>
-                <Content style={{padding: 24}}>
+              <Layout className="full-height">
+                <Content style={{padding: 24}} className="full-height content-scroll">
                   <h2>Тест 2</h2>
                 </Content>
               </Layout>
