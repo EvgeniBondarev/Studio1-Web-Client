@@ -1,11 +1,11 @@
 import {Layout, Tree, Input, Spin, Empty, App, Typography, Modal, Space} from 'antd'
 import {InfoCircleOutlined, EditOutlined, DeleteOutlined} from '@ant-design/icons'
-import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
+import {useQuery} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
 import {fetchPartsPageWithoutProducer, updatePart, createPart, deletePart} from '../../api/parts.ts'
 import {fetchProducerById, updateProducer, createProducer, deleteProducer} from '../../api/producers.ts'
 import {EntityFormModal} from '../EntityFormModal.tsx'
-import {PartFormModal} from '../partsPanel/components/partFormModal'
+import {PartFormModal} from '../partsPanel/components/PartFormModal.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal'
 import {PartDetailsModal} from '../partDetailsModal'
 import {ContextActionsMenu} from '../ContextActionsMenu.tsx'
@@ -15,6 +15,7 @@ import type {EtPart, EtProducer} from '../../api/types.ts'
 import {type DataNode} from 'antd/es/tree';
 
 import {type CrossTree, fetchAllByMainCode, findCrossTreeByMainCode, type TreeNode} from '../../api/crossCode.ts';
+import {useEntityMutation} from '../hooks/useEntityMutation.ts';
 
 const {Content} = Layout
 const {Text} = Typography
@@ -89,66 +90,75 @@ export const CrossCodePage = () => {
 
   const isLoading = isLoadingAll || isLoadingTree || isFetching
   const totalCount = allItems?.length ?? 0
-  const queryClient = useQueryClient()
 
-  const partUpdateMutation = useMutation({
-    mutationFn: ({id, payload}: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
-    onSuccess: () => {
-      message.success('Деталь сохранена')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-      queryClient.invalidateQueries({queryKey: ['cross-all', mainCode]})
-      setIsPartModalOpen(false)
-      setEditingPart(null)
-    },
-  })
+  const partUpdateMutation = useEntityMutation(
+    ({ id, payload }: { id: number; payload: Partial<EtPart> }) =>
+      updatePart(id, payload),
+    {
+      successMessage: 'Деталь сохранена',
+      invalidate: [
+        ['cross-tree', mainCode],
+        ['cross-all', mainCode],
+      ],
+      onSuccessExtra: () => {
+        setIsPartModalOpen(false)
+        setEditingPart(null)
+      },
+    })
 
-  const partCreateMutation = useMutation({
-    mutationFn: (payload: Partial<EtPart>) => createPart(payload),
-    onSuccess: () => {
-      message.success('Деталь добавлена')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-      queryClient.invalidateQueries({queryKey: ['cross-all', mainCode]})
-      setIsPartModalOpen(false)
-      setEditingPart(null)
-    },
-  })
+  const partCreateMutation = useEntityMutation(
+    (payload: Partial<EtPart>) => createPart(payload),
+    {
+      successMessage: 'Деталь добавлена',
+      invalidate: [
+        ['cross-tree', mainCode],
+        ['cross-all', mainCode],
+      ],
+      onSuccessExtra: () => {
+        setIsPartModalOpen(false)
+        setEditingPart(null)
+      },
+    })
 
-  const producerUpdateMutation = useMutation({
-    mutationFn: ({id, payload}: { id: number; payload: Partial<EtProducer> }) => updateProducer(id, payload),
-    onSuccess: () => {
-      message.success('Производитель сохранен')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-      setIsProducerModalOpen(false)
-      setEditingProducer(null)
-    },
-  })
+  const partDeleteMutation = useEntityMutation(
+    (id: number) => deletePart(id),
+    {
+      successMessage: 'Деталь удалена',
+      invalidate: [
+        ['cross-tree', mainCode],
+        ['cross-all', mainCode],
+      ],
+    })
 
-  const producerCreateMutation = useMutation({
-    mutationFn: (payload: Partial<EtProducer>) => createProducer(payload),
-    onSuccess: () => {
-      message.success('Производитель добавлен')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-      setIsProducerModalOpen(false)
-      setEditingProducer(null)
-    },
-  })
+  const producerUpdateMutation = useEntityMutation(
+    ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
+      updateProducer(id, payload),
+    {
+      successMessage: 'Производитель сохранен',
+      invalidate: [['cross-tree', mainCode]],
+      onSuccessExtra: () => {
+        setIsProducerModalOpen(false)
+        setEditingProducer(null)
+      },
+    })
 
-  const partDeleteMutation = useMutation({
-    mutationFn: (id: number) => deletePart(id),
-    onSuccess: () => {
-      message.success('Деталь удалена')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-      queryClient.invalidateQueries({queryKey: ['cross-all', mainCode]})
-    },
-  })
+  const producerCreateMutation = useEntityMutation(
+    (payload: Partial<EtProducer>) => createProducer(payload),
+    {
+      successMessage: 'Производитель добавлен',
+      invalidate: [['cross-tree', mainCode]],
+      onSuccessExtra: () => {
+        setIsProducerModalOpen(false)
+        setEditingProducer(null)
+      },
+    })
 
-  const producerDeleteMutation = useMutation({
-    mutationFn: (id: number) => deleteProducer(id),
-    onSuccess: () => {
-      message.success('Производитель удален')
-      queryClient.invalidateQueries({queryKey: ['cross-tree', mainCode]})
-    },
-  })
+  const producerDeleteMutation = useEntityMutation(
+    (id: number) => deleteProducer(id),
+    {
+      successMessage: 'Производитель удален',
+      invalidate: [['cross-tree', mainCode]],
+    })
 
   const handlePartView = async (code: string) => {
     try {
@@ -334,8 +344,8 @@ export const CrossCodePage = () => {
 
 
   return (
-    <Layout>
-      <Content style={{padding: 24, maxWidth: 1200}}>
+    <Layout className="full-height" >
+      <Content style={{padding: 24, maxWidth: 1200}} className="full-height content-scroll" >
         <h2>Поиск</h2>
 
         <Input.Search

@@ -1,8 +1,8 @@
 import {useEffect, useRef, useState} from 'react'
-import {useMutation, useQueryClient} from '@tanstack/react-query'
-import {message, Modal} from 'antd'
+import {Modal} from 'antd'
 import type {EtPart, EtProducer} from '../../../api/types.ts'
 import {createPart, deletePart, updatePart} from '../../../api/parts.ts'
+import {useEntityMutation} from '../../hooks/useEntityMutation.ts';
 
 export const usePartFormModal = (
     producer?: EtProducer | null,
@@ -13,7 +13,6 @@ export const usePartFormModal = (
 ) => {
     const [isModalOpen, setModalOpen] = useState(false)
     const [editingPart, setEditingPart] = useState<EtPart | null>(null)
-    const queryClient = useQueryClient()
 
     // Автоматическое открытие редактирования при получении autoEditPart
     const processedAutoEditPartRef = useRef<EtPart | null | undefined>(undefined)
@@ -28,34 +27,36 @@ export const usePartFormModal = (
         }
     }, [autoEditPart, producer, onAutoEditProcessed])
 
-    const createMutation = useMutation({
-        mutationFn: createPart,
-        onSuccess: () => {
-            message.success('Деталь добавлена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            closeModal()
-        },
-    })
+    const createMutation = useEntityMutation<Partial<EtPart>, EtPart>(
+      createPart,
+      {
+          successMessage: 'Деталь добавлена',
+          invalidate: [['parts']],
+          onSuccessExtra: ()=> closeModal(),
+      }
+    )
 
-    const updateMutation = useMutation({
-        mutationFn: ({id, payload}: { id: number; payload: Partial<EtPart> }) => updatePart(id, payload),
-        onSuccess: () => {
-            message.success('Деталь сохранена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            closeModal()
-        },
-    })
+    const updateMutation = useEntityMutation<{ id: number; payload: Partial<EtPart> }, EtPart>(
+      ({ id, payload }) => updatePart(id, payload),
+      {
+          successMessage: 'Деталь сохранена',
+          invalidate: [['parts']],
+          onSuccessExtra: ()=> closeModal(),
+      }
+    )
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => deletePart(id),
-        onSuccess: (_, id) => {
-            message.success('Деталь удалена')
-            queryClient.invalidateQueries({queryKey: ['parts']})
-            if (selectedPart?.Id === id) {
-                onSelectPart?.(null)
-            }
-        },
-    })
+    const deleteMutation = useEntityMutation<number, void>(
+      (id) => deletePart(id),
+      {
+          successMessage: 'Деталь удалена',
+          invalidate: [['parts']],
+          onSuccessExtra: () => {
+              if (selectedPart?.Id) {
+                  onSelectPart?.(null)
+              }
+          },
+      }
+    )
 
     const confirmDelete = (part: EtPart) => {
         Modal.confirm({
