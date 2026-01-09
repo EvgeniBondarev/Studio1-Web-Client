@@ -5,13 +5,11 @@ import {ImagesTab} from './imageTab/ImagesTab'
 import {LeftCol} from './formColumns/LeftCol'
 import {RightCol} from './formColumns/RightCol'
 import {DetailsTab} from './detailsTab/DetailsTab'
-import type {CtSession, EtPart} from '../../../api/types.ts';
+import type {CtSession, EtPart, PRResponse} from '../../../api/types.ts';
 import {usePartStrings} from '../../hooks/usePartStrings.tsx';
 import dayjs from 'dayjs';
 import {useEffect} from 'react';
 import type {EtPartForm} from '../../partsPanel/components/PartFormModal.tsx';
-
-
 
 interface PartFormCardProps {
   initialValues?: Partial<EtPart>
@@ -19,8 +17,9 @@ interface PartFormCardProps {
   activeTab: string
   setActiveTab: (tab: string) => void
   selectedSession?: CtSession
-  PRdata?: any
+  PRdata?: PRResponse
   isPRLoading: boolean
+  readOnly?: boolean
 }
 
 export const PartFormCard = ({
@@ -30,13 +29,12 @@ export const PartFormCard = ({
                                setActiveTab,
                                selectedSession,
                                PRdata,
-                               isPRLoading
+                               isPRLoading,
+                               readOnly
                              }: PartFormCardProps) => {
-
 
   const { getText } = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
 
-  // Подготовка данных для формы
   useEffect(() => {
     if (!initialValues) {
       form.resetFields()
@@ -90,10 +88,10 @@ export const PartFormCard = ({
       </Form.Item>
       <Row gutter={16}>
         <Col span={14}>
-          <LeftCol/>
+          <LeftCol readOnly={readOnly}/>
         </Col>
         <Col span={10}>
-          <RightCol/>
+          <RightCol readOnly={readOnly}/>
         </Col>
       </Row>
       <div style={{
