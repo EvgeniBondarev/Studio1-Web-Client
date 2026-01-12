@@ -374,7 +374,7 @@ export const CrossCodePage = () => {
                 className="cross-tree"
                 treeData={[
                   {
-                    key: tree.mainCode,
+                    key: `main:${tree.mainCode}`,
                     title: <div className="cross-tree-main-row">
                       <span className="cross-tree-main-row__code"><b>{tree.mainCode}</b></span>
                       <span
@@ -386,7 +386,6 @@ export const CrossCodePage = () => {
                     ),
                   },
                 ]}
-
               />
             </div>
           </>
