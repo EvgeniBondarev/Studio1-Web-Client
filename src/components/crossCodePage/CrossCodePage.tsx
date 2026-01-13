@@ -1,8 +1,6 @@
-import {Layout, Tree, Input, Spin, Empty, App, Typography, Modal} from 'antd'
+import {Layout, Tree, Input, Spin, Empty, App, Typography} from 'antd'
 import {useQuery} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
-import {fetchPartsPageWithoutProducer, updatePart, createPart, deletePart} from '../../api/parts.ts'
-import {fetchProducerById, updateProducer, createProducer, deleteProducer} from '../../api/producers.ts'
 import {EntityFormModal} from '../EntityFormModal.tsx'
 import {PartFormModal} from '../partsPanel/components/PartFormModal.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal'
@@ -10,9 +8,9 @@ import {PartDetailsModal} from '../partDetailsModal'
 import {producerFields} from '../../config/resources.ts'
 import type {EtPart, EtProducer} from '../../api/types.ts'
 import {type CrossTree, fetchAllByMainCode, findCrossTreeByMainCode} from '../../api/crossCode.ts';
-import {useEntityMutation} from '../hooks/useEntityMutation.ts';
 import {createCrossTreeMapper} from './crossTreeMapper.tsx';
 import {useFormatDate} from '../hooks/useFormatDate.ts';
+import {useCrossCodeActions} from './useCrossCodeActions.ts';
 
 const {Content} = Layout
 const {Text} = Typography
@@ -88,160 +86,30 @@ export const CrossCodePage = () => {
   const isLoading = isLoadingAll || isLoadingTree || isFetching
   const totalCount = allItems?.length ?? 0
 
-  const partUpdateMutation = useEntityMutation(
-    ({ id, payload }: { id: number; payload: Partial<EtPart> }) =>
-      updatePart(id, payload),
-    {
-      successMessage: 'Деталь сохранена',
-      invalidate: [
-        ['cross-tree', mainCode],
-        ['cross-all', mainCode],
-      ],
-      onSuccessExtra: () => {
-        setIsPartModalOpen(false)
-        setEditingPart(null)
-      },
-    })
-
-  const partCreateMutation = useEntityMutation(
-    (payload: Partial<EtPart>) => createPart(payload),
-    {
-      successMessage: 'Деталь добавлена',
-      invalidate: [
-        ['cross-tree', mainCode],
-        ['cross-all', mainCode],
-      ],
-      onSuccessExtra: () => {
-        setIsPartModalOpen(false)
-        setEditingPart(null)
-      },
-    })
-
-  const partDeleteMutation = useEntityMutation(
-    (id: number) => deletePart(id),
-    {
-      successMessage: 'Деталь удалена',
-      invalidate: [
-        ['cross-tree', mainCode],
-        ['cross-all', mainCode],
-      ],
-    })
-
-  const producerUpdateMutation = useEntityMutation(
-    ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
-      updateProducer(id, payload),
-    {
-      successMessage: 'Производитель сохранен',
-      invalidate: [['cross-tree', mainCode]],
-      onSuccessExtra: () => {
-        setIsProducerModalOpen(false)
-        setEditingProducer(null)
-      },
-    })
-
-  const producerCreateMutation = useEntityMutation(
-    (payload: Partial<EtProducer>) => createProducer(payload),
-    {
-      successMessage: 'Производитель добавлен',
-      invalidate: [['cross-tree', mainCode]],
-      onSuccessExtra: () => {
-        setIsProducerModalOpen(false)
-        setEditingProducer(null)
-      },
-    })
-
-  const producerDeleteMutation = useEntityMutation(
-    (id: number) => deleteProducer(id),
-    {
-      successMessage: 'Производитель удален',
-      invalidate: [['cross-tree', mainCode]],
-    })
-
-  const handlePartView = async (code: string) => {
-    try {
-      const partsPage = await fetchPartsPageWithoutProducer(code, 'exact')
-      const part = partsPage.items.find(p => p.Code === code)
-      if (part) {
-        const producer = part.ProducerId ? await fetchProducerById(part.ProducerId).catch(() => null) : null
-        setViewingPartProducer(producer)
-        setViewingPart(part)
-      } else {
-        message.warning('Деталь не найдена')
-      }
-    } catch (error) {
-      message.error('Ошибка при загрузке детали')
-    }
-  }
-
-  const handlePartEdit = async (code: string) => {
-    try {
-      const partsPage = await fetchPartsPageWithoutProducer(code, 'exact')
-      const part = partsPage.items.find(p => p.Code === code)
-      if (part) {
-        setEditingPart(part)
-        setIsPartModalOpen(true)
-      } else {
-        message.warning('Деталь не найдена')
-      }
-    } catch (error) {
-      message.error('Ошибка при загрузке детали')
-    }
-  }
-
-  const handlePartDelete = (part: EtPart) => {
-    Modal.confirm({
-      title: 'Удалить деталь?',
-      content: `Вы уверены, что хотите удалить деталь ${part.Code ?? 'без кода'}?`,
-      okText: 'Удалить',
-      cancelText: 'Отмена',
-      okButtonProps: {danger: true, loading: partDeleteMutation.isPending},
-      onOk: () => partDeleteMutation.mutate(part.Id),
-    })
-  }
-
-  const handleProducerView = async (producerId: number) => {
-    try {
-      const producer = await fetchProducerById(producerId)
-      setViewingProducer(producer)
-    } catch (error) {
-      message.error('Ошибка при загрузке производителя')
-    }
-  }
-
-  const handleProducerEdit = async (producerId: number) => {
-    try {
-      const producer = await fetchProducerById(producerId)
-      setEditingProducer(producer)
-      setIsProducerModalOpen(true)
-    } catch (error) {
-      message.error('Ошибка при загрузке производителя')
-    }
-  }
-
-  const handleProducerDelete = (producer: EtProducer) => {
-    Modal.confirm({
-      title: 'Удалить производителя?',
-      content: `Вы уверены, что хотите удалить ${producer.Name ?? 'без названия'}?`,
-      okText: 'Удалить',
-      cancelText: 'Отмена',
-      okButtonProps: {danger: true, loading: producerDeleteMutation.isPending},
-      onOk: () => producerDeleteMutation.mutate(producer.Id),
-    })
-  }
+  const actions = useCrossCodeActions({
+    mainCode,
+    setEditingPart,
+    setIsPartModalOpen,
+    setViewingPart,
+    setViewingPartProducer,
+    setEditingProducer,
+    setIsProducerModalOpen,
+    setViewingProducer,
+  })
 
   const handlePartSubmit = (values: Partial<EtPart>) => {
     if (editingPart) {
-      partUpdateMutation.mutate({id: editingPart.Id, payload: values})
+      actions.partUpdateMutation.mutate({id: editingPart.Id, payload: values})
     } else {
-      partCreateMutation.mutate(values)
+      actions.partCreateMutation.mutate(values)
     }
   }
 
   const handleProducerSubmit = (values: Partial<EtProducer>) => {
     if (editingProducer) {
-      producerUpdateMutation.mutate({id: editingProducer.Id, payload: values})
+      actions.producerUpdateMutation.mutate({id: editingProducer.Id, payload: values})
     } else {
-      producerCreateMutation.mutate(values)
+      actions.producerCreateMutation.mutate(values)
     }
   }
 
@@ -254,19 +122,15 @@ export const CrossCodePage = () => {
 
   const mapNodeToTreeData = createCrossTreeMapper({
     // producer
-    onProducerView: handleProducerView,
-    onProducerEdit: handleProducerEdit,
-    onProducerDelete: handleProducerDelete,
+    onProducerView: actions.handleProducerView,
+    onProducerEdit: actions.handleProducerEdit,
+    onProducerDelete: actions.handleProducerDelete,
     getProducerDisplayName,
 
     // part
-    onPartView: handlePartView,
-    onPartEdit: handlePartEdit,
-    onPartDeleteByCode: async (code: string) => {
-      const partsPage = await fetchPartsPageWithoutProducer(code, 'exact')
-      const part = partsPage.items.find(p => p.Code === code)
-      if (part) handlePartDelete(part)
-    },
+    onPartView: actions.handlePartView,
+    onPartEdit: actions.handlePartEdit,
+    onPartDeleteByCode: actions.handlePartDeleteByCode,
 
     // utils
     formatDate,
@@ -325,7 +189,7 @@ export const CrossCodePage = () => {
           open={isPartModalOpen}
           mode={editingPart ? 'edit' : 'create'}
           initialValues={editingPart ?? undefined}
-          loading={partUpdateMutation.isPending || partCreateMutation.isPending}
+          loading={actions.partUpdateMutation.isPending || actions.partCreateMutation.isPending}
           onCancel={() => {
             setIsPartModalOpen(false)
             setEditingPart(null)
@@ -343,7 +207,7 @@ export const CrossCodePage = () => {
           }}
           onSubmit={handleProducerSubmit}
           fields={producerFields}
-          loading={producerUpdateMutation.isPending || producerCreateMutation.isPending}
+          loading={actions.producerUpdateMutation.isPending || actions.producerCreateMutation.isPending}
           initialValues={editingProducer ?? {Rating: 0}}
         />
 
