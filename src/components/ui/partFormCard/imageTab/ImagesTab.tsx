@@ -2,8 +2,8 @@ import {Empty, message, Spin} from 'antd';
 import type {ProductImage} from '../../../../api/types.ts';
 import {PRImages} from './prImages/PRImages.tsx';
 import {useEffect, useState} from 'react';
-import type {ImageResponseItem} from '../../../../api/clientTypes.ts';
-import {fetchImageUrlByProducerId} from '../../../../api/interPartsClient.ts';
+import type {ImageResponseItem} from '../../../../api/S3/clientTypes.ts';
+import {fetchImageUrlByProducerId} from '../../../../api/S3/interPartsClient.ts';
 
 type Props = {
     prIsLoading: boolean;
