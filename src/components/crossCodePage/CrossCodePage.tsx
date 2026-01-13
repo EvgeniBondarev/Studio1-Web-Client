@@ -1,5 +1,4 @@
-import {Layout, Tree, Input, Spin, Empty, App, Typography, Modal, Space} from 'antd'
-import {InfoCircleOutlined, EditOutlined, DeleteOutlined} from '@ant-design/icons'
+import {Layout, Tree, Input, Spin, Empty, App, Typography, Modal} from 'antd'
 import {useQuery} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
 import {fetchPartsPageWithoutProducer, updatePart, createPart, deletePart} from '../../api/parts.ts'
@@ -8,14 +7,12 @@ import {EntityFormModal} from '../EntityFormModal.tsx'
 import {PartFormModal} from '../partsPanel/components/PartFormModal.tsx';
 import {ProducerDetailsModal} from '../producerDetailsModal'
 import {PartDetailsModal} from '../partDetailsModal'
-import {ContextActionsMenu} from '../ContextActionsMenu.tsx'
-import {useFormatDate} from '../hooks/useFormatDate.ts'
 import {producerFields} from '../../config/resources.ts'
 import type {EtPart, EtProducer} from '../../api/types.ts'
-import {type DataNode} from 'antd/es/tree';
-
-import {type CrossTree, fetchAllByMainCode, findCrossTreeByMainCode, type TreeNode} from '../../api/crossCode.ts';
+import {type CrossTree, fetchAllByMainCode, findCrossTreeByMainCode} from '../../api/crossCode.ts';
 import {useEntityMutation} from '../hooks/useEntityMutation.ts';
+import {createCrossTreeMapper} from './crossTreeMapper.tsx';
+import {useFormatDate} from '../hooks/useFormatDate.ts';
 
 const {Content} = Layout
 const {Text} = Typography
@@ -255,97 +252,30 @@ export const CrossCodePage = () => {
     return prefix ? `${name} (${prefix})` : name
   }
 
-  function mapNodeToTreeData(
-    node: TreeNode,
-    path = ''
-  ): DataNode {
-    if (node.type === 'producer') {
-      const key = `${path}-producer-${node.cross}`
+  const mapNodeToTreeData = createCrossTreeMapper({
+    // producer
+    onProducerView: handleProducerView,
+    onProducerEdit: handleProducerEdit,
+    onProducerDelete: handleProducerDelete,
+    getProducerDisplayName,
 
-      return {
-        key,
-        title: (
-          <ContextActionsMenu
-            actions={node.producer ? [
-              {
-                key: 'view',
-                label: <Space size={6}><InfoCircleOutlined/>Просмотр</Space>,
-                onClick: () => handleProducerView(node.producer!.Id),
-              },
-              {
-                key: 'edit',
-                label: <Space size={6}><EditOutlined/>Редактировать</Space>,
-                onClick: () => handleProducerEdit(node.producer!.Id),
-              },
-              {
-                key: 'delete',
-                label: <Space size={6}><DeleteOutlined/>Удалить</Space>,
-                danger: true,
-                onClick: () => handleProducerDelete(node.producer!),
-              },
-            ] : []}
-          >
-          <span className="cross-tree-brand-row">
-            {getProducerDisplayName(node.producer)}
-          </span>
-          </ContextActionsMenu>
-        ),
-        children: node.children.map(child =>
-          mapNodeToTreeData(child, key)
-        ),
-      }
-    }
+    // part
+    onPartView: handlePartView,
+    onPartEdit: handlePartEdit,
+    onPartDeleteByCode: async (code: string) => {
+      const partsPage = await fetchPartsPageWithoutProducer(code, 'exact')
+      const part = partsPage.items.find(p => p.Code === code)
+      if (part) handlePartDelete(part)
+    },
 
-    const key = `${path}-code-${node.id}`
-
-    return {
-      key,
-      title: (
-        <ContextActionsMenu
-          actions={[
-            {
-              key: 'view',
-              label: <Space size={6}><InfoCircleOutlined/>Просмотр</Space>,
-              onClick: () => handlePartView(node.code),
-            },
-            {
-              key: 'edit',
-              label: <Space size={6}><EditOutlined/>Редактировать</Space>,
-              onClick: () => handlePartEdit(node.code),
-            },
-            {
-              key: 'delete',
-              label: <Space size={6}><DeleteOutlined/>Удалить</Space>,
-              danger: true,
-              onClick: async () => {
-                const partsPage = await fetchPartsPageWithoutProducer(node.code, 'exact')
-                const part = partsPage.items.find(p => p.Code === node.code)
-                if (part) handlePartDelete(part)
-              },
-            },
-          ]}
-        >
-          <div className="cross-tree-code-row">
-            <span className="cross-tree-code-row__code">{node.code}</span>
-            <span className="cross-tree-code-row__verity">
-            {node.verity}%({node.verity}%)
-          </span>
-            <span className="cross-tree-code-row__date">
-            {formatDate(node.date) ?? '—'}
-          </span>
-          </div>
-        </ContextActionsMenu>
-      ),
-      children: node.children.map(child =>
-        mapNodeToTreeData(child, key)
-      ),
-    }
-  }
+    // utils
+    formatDate,
+  })
 
 
   return (
-    <Layout className="full-height" >
-      <Content style={{padding: 24, maxWidth: 1200}} className="full-height content-scroll" >
+    <Layout className="full-height">
+      <Content style={{padding: 24, maxWidth: 1200}} className="full-height content-scroll">
         <h2>Поиск</h2>
 
         <Input.Search
