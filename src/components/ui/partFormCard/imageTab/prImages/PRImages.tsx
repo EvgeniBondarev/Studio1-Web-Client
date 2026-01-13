@@ -1,4 +1,4 @@
-import type {ProductImage} from '../../../../../../api/types.ts';
+import type {ProductImage} from '../../../../../api/types.ts';
 import {Modal, Typography} from 'antd';
 import {useState} from 'react';
 import {PRImageItem} from './PRImageItem.tsx';

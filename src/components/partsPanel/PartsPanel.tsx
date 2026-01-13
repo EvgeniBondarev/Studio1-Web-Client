@@ -2,7 +2,6 @@ import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
 import {PartDetailsModal} from '../partDetailsModal';
-import {PartFormModal} from './components/partFormModal';
 import {PartsHeader} from './components/PartsHeader.tsx';
 import {PartsSearch} from './components/PartsSearch.tsx';
 import {usePartsActionsMap} from './hooks/usePartsActionsMap.tsx';
@@ -15,6 +14,7 @@ import {useCopyToClipboard} from './hooks/useCopyToClipboard.ts';
 import {useCountLabel} from './hooks/useCountLabel.ts';
 import {useSearchNormalization} from './hooks/useSearchNormalization.ts';
 import type {SearchType} from '../../config/resources.ts';
+import {PartFormModal} from './components/PartFormModal.tsx';
 
 export type CodeFilterMode = 'exact' | 'startsWith' | 'endsWith' | 'contains'
 
