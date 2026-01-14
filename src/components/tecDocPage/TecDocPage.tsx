@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import {Link} from 'react-router-dom'
 import { Layout, Button, Typography, Row, Col, Space } from 'antd'
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons'
 import './tecDoc.css'
@@ -17,8 +17,8 @@ export const TecDocPage = () => {
           </Title>
 
           <Space size="large">
-            <Link to="/search/articles" className={'header-link'}>Поиск артикулов</Link>
-            <Link to="/search/suppliers" className={'header-link'}>Поиск поставщиков</Link>
+            <Link  to="/tecdoc/search/articles" className={'header-link'}>Поиск артикулов</Link>
+            <Link to="/tecdoc/search/suppliers" className={'header-link'}>Поиск поставщиков</Link>
           </Space>
         </div>
       </Header>

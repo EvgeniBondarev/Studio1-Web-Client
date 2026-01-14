@@ -21,7 +21,9 @@ import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';
 import {CrossCodePage} from './components/crossCodePage';
-import {TecDocPage} from './components/tecDocPage/TecDocPage.tsx';
+import {TecDocRoutes} from './components/tecDocPage';
+import {useLocation, useNavigate} from 'react-router-dom';
+
 
 const {Sider, Content} = Layout
 
@@ -69,6 +71,15 @@ const AdminApp = () => {
   const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
   const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
   const [partsProducerIds, setPartsProducerIds] = useState<number[]>([])
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/tecdoc')) {
+      setActiveTab('tecdoc');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -271,7 +282,7 @@ const AdminApp = () => {
       icon: <ApartmentOutlined/>,
     },
     {
-      key: 'tecDoc',
+      key: 'tecdoc',
       label: 'Каталог TecDoc',
       icon: <FileSearchOutlined />,
     },
@@ -374,7 +385,12 @@ const AdminApp = () => {
                 mode="inline"
                 selectedKeys={[activeTab]}
                 items={navItems}
-                onClick={({key}) => setActiveTab(key)}
+                onClick={({key}) => {
+                  setActiveTab(key)
+                  if (key !== 'tecdoc' && location.pathname.startsWith('/tecdoc')) {
+                    navigate('/')
+                  }
+                }}
                 style={{borderInlineEnd: 'none'}}
               />
               <div className="navigation-sider__footer">
@@ -434,8 +450,8 @@ const AdminApp = () => {
               </Layout>
             ) : activeTab === 'crossCode' ? (
              <CrossCodePage/>
-            ) : activeTab === 'tecDoc' ? (
-                  <TecDocPage/>
+            ) : activeTab === 'tecdoc' ? (
+                  <TecDocRoutes/>
             ) : activeTab === 'test1' ? (
               <Layout className="full-height">
                 <Content style={{padding: 24}} className="full-height content-scroll">
