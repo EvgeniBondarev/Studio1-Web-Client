@@ -8,7 +8,7 @@ import {
   SettingOutlined,
   MoonOutlined,
   SunOutlined,
-  DollarOutlined, ApartmentOutlined
+  DollarOutlined, ApartmentOutlined, FileSearchOutlined
 } from '@ant-design/icons'
 import type {MenuProps} from 'antd'
 import type {EtPart, EtProducer, CtUser} from './api/types.ts'
@@ -21,6 +21,7 @@ import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';
 import {CrossCodePage} from './components/crossCodePage';
+import {TecDocPage} from './components/tecDocPage/TecDocPage.tsx';
 
 const {Sider, Content} = Layout
 
@@ -270,6 +271,11 @@ const AdminApp = () => {
       icon: <ApartmentOutlined/>,
     },
     {
+      key: 'tecDoc',
+      label: 'Каталог TecDoc',
+      icon: <FileSearchOutlined />,
+    },
+    {
       key: 'test1',
       label: 'Тест 1',
       icon: <ExperimentOutlined/>,
@@ -428,6 +434,8 @@ const AdminApp = () => {
               </Layout>
             ) : activeTab === 'crossCode' ? (
              <CrossCodePage/>
+            ) : activeTab === 'tecDoc' ? (
+                  <TecDocPage/>
             ) : activeTab === 'test1' ? (
               <Layout className="full-height">
                 <Content style={{padding: 24}} className="full-height content-scroll">
