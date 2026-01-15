@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {Input, Button, Select, Checkbox, Form, Flex} from 'antd'
 import {SearchOutlined, SortAscendingOutlined} from '@ant-design/icons'
 import type {SupplierSearchRequest} from '../../../../api/TecDoc/api/types.ts';
@@ -24,8 +24,7 @@ export const SupplierSearchForm=({
   >('relevance')
   const [sortDescending, setSortDescending] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = () => {
     onSubmit({
       query: query.trim() || null,
       sortBy,

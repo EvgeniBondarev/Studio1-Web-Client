@@ -12,6 +12,7 @@ import {Link} from 'react-router-dom';
 import {ViewToggle} from '../../../ui/view-toggle.tsx';
 import {Pagination} from '../../../ui/Pagination.tsx';
 import {SupplierSearchForm} from './SupplierSearchForm.tsx';
+import {SupplierList} from '../../../ui/tecDoc/SupplierList.tsx';
 
 
 const { Header, Content } = Layout
@@ -192,10 +193,10 @@ export const SearchSuppliersPage=()=> {
               </Col>
             </Row>
 
-              {/*<SupplierList*/}
-              {/*  suppliers={data.items}*/}
-              {/*  viewMode={viewMode}*/}
-              {/*/>*/}
+              <SupplierList
+                suppliers={data.items}
+                viewMode={viewMode}
+              />
 
                 <Pagination
                   currentPage={data.page}
