@@ -17,9 +17,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ value, onChange, style }
     display: 'flex',
     alignItems: 'center',
     backgroundColor: active ? '#E6F7FF' : 'white',
-    color: active ? '#1890FF' : '#595959',
-    border: '1px solid #d9d9d9',
-    borderRadius: 6,
+    color: active ? '#2563eb' : '#595959',
     cursor: 'pointer',
     fontSize: 14,
   });
