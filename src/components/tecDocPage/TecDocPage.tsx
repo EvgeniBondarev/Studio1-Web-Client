@@ -34,13 +34,13 @@ export const TecDocPage = () => {
 
           {/* Actions */}
           <Space size="middle" wrap>
-            <Link to="/search/articles">
+            <Link to="/tecdoc/search/articles">
               <Button type="primary" size="large" icon={<SearchOutlined />}>
                 Поиск артикулов
               </Button>
             </Link>
 
-            <Link to="/search/suppliers">
+            <Link to="/tecdoc/search/suppliers">
               <Button size="large" icon={<TeamOutlined />}>
                 Поиск поставщиков
               </Button>
