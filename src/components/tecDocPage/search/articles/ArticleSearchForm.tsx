@@ -9,9 +9,6 @@ import {
   LoadingOutlined,
   HomeOutlined
 } from '@ant-design/icons'
-
-// import { SupplierAutocomplete } from './supplier-autocomplete'
-
 import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 import {
   clearSearchHistory,
@@ -19,6 +16,7 @@ import {
   historyItemToSearchRequest, removeSearchFromHistory,
   type SearchHistoryItem
 } from '../../../../api/TecDoc/utils/search-history.ts';
+import SupplierAutocomplete from '../../../ui/tecDoc/SupplierAutocomplete.tsx';
 
 interface Props {
   onSubmit: (request: ArticleSearchRequest) => void
@@ -148,7 +146,6 @@ export function ArticleSearchForm({
       })
     }
   }
-
 
   return (
     <Form
@@ -323,19 +320,18 @@ export function ArticleSearchForm({
         <div style={{ flex: 1, minWidth: 200 }}>
           <Form.Item label="Поставщик (опционально)">
             {mounted ? (
-              <div>SupplierAutocomplete</div>
-              // <SupplierAutocomplete
-              //   value={supplierId}
-              //   onChange={(id) => {
-              //     setSupplierId(id)
-              //     // Сбрасываем название при изменении ID
-              //     if (!id) setSupplierName(undefined)
-              //   }}
-              //   onSupplierSelect={(supplier) =>
-              //     setSupplierName(supplier.description)
-              //   }
-              //   placeholder="Начните вводить название поставщика..."
-              // />
+              <SupplierAutocomplete
+                value={supplierId}
+                onChange={(id) => {
+                  setSupplierId(id)
+                  // Сбрасываем название при изменении ID
+                  if (!id) setSupplierName(undefined)
+                }}
+                onSupplierSelect={(supplier) =>
+                  setSupplierName(supplier.description)
+                }
+                placeholder="Начните вводить название поставщика..."
+              />
             ) : (
               <Input disabled placeholder="Начните вводить название поставщика..." />
             )}

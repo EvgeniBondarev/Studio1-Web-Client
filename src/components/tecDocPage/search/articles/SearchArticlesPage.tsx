@@ -2,17 +2,19 @@ import type {ArticleSearchRequest, ArticleSearchResult} from '../../../../api/Te
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {useSearchParams, useNavigate, Link} from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Layout, Card, Typography, Alert, Pagination, Flex } from 'antd'
+import { Layout, Card, Typography, Alert, Flex } from 'antd'
 import {AlertOutlined} from '@ant-design/icons'
 import '../../tecDoc.css'
 
 import type {ApiError} from '../../../../api/TecDoc/api/client.ts';
-// import {ViewToggle} from '../../../ui/view-toggle.tsx';
 import {articleSearchService} from '../../../../api/TecDoc/api/services/article-search.service.ts';
 import {ArticleSearchForm} from './ArticleSearchForm.tsx';
 import {saveSearchToHistory} from '../../../../api/TecDoc/utils/search-history.ts';
 import {ArticleList} from '../../../ui/tecDoc/ArticleList.tsx';
-// import {getViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
+import {ViewToggle} from '../../../ui/view-toggle.tsx';
+import {getViewMode, setViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
+import {Pagination} from '../../../ui/Pagination.tsx';
+
 
 const { Header, Content } = Layout
 const { Title, Text } = Typography
@@ -87,12 +89,12 @@ export  const SearchArticlesPage=()=> {
   })
 
   const [currentSupplierName, setCurrentSupplierName] = useState<string | undefined>()
-  // const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-  //   if (typeof window !== 'undefined') {
-  //     return getViewMode()
-  //   }
-  //   return 'cards'
-  // })
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return getViewMode()
+    }
+    return 'cards'
+  })
 
   // Синхронизируем состояние с URL при изменении параметров URL
   useEffect(() => {
@@ -278,13 +280,13 @@ export  const SearchArticlesPage=()=> {
                 )}
               </Text>
 
-              {/*<ViewToggle*/}
-              {/*  value={viewMode}*/}
-              {/*  onChange={(mode) => {*/}
-              {/*    setViewModeState(mode)*/}
-              {/*    setViewMode(mode)*/}
-              {/*  }}*/}
-              {/*/>*/}
+              <ViewToggle
+                value={viewMode}
+                onChange={(mode) => {
+                  setViewModeState(mode)
+                  setViewMode(mode)
+                }}
+              />
             </Flex>
 
             <ArticleList
@@ -294,14 +296,9 @@ export  const SearchArticlesPage=()=> {
             />
 
             <Pagination
-              current={data.page}
-              total={data.total}
-              pageSize={data.pageSize}
-              onChange={handlePageChange}
-              style={{
-                marginTop: 24,
-                textAlign: 'center',
-              }}
+              currentPage={data.page}
+              totalPages={data.total}
+              onPageChange={handlePageChange}
             />
           </>
         )}
