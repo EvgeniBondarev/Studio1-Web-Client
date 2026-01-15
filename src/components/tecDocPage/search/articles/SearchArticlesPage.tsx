@@ -11,6 +11,7 @@ import type {ApiError} from '../../../../api/TecDoc/api/client.ts';
 import {articleSearchService} from '../../../../api/TecDoc/api/services/article-search.service.ts';
 import {ArticleSearchForm} from './ArticleSearchForm.tsx';
 import {saveSearchToHistory} from '../../../../api/TecDoc/utils/search-history.ts';
+import {ArticleList} from '../../../ui/tecDoc/ArticleList.tsx';
 // import {getViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
 
 const { Header, Content } = Layout
@@ -151,7 +152,7 @@ export  const SearchArticlesPage=()=> {
       }
     }
 
-    const newUrl = params.toString() ? `/search/articles?${params.toString()}` : '/search/articles'
+    const newUrl = params.toString() ? `tecdoc/search/articles?${params.toString()}` : 'tecdoc/search/articles'
     navigate(newUrl)
   }
 
@@ -171,7 +172,7 @@ export  const SearchArticlesPage=()=> {
     saveSearchToHistory(newRequest, currentSupplierName)
   }
 
-  const handleSupplierChange = (supplierId: number | undefined, supplierName?: string) => {
+  const handleSupplierChange = (supplierName?: string) => {
     setCurrentSupplierName(supplierName)
   }
 
@@ -186,6 +187,7 @@ export  const SearchArticlesPage=()=> {
       style={{
         minHeight: '100vh',
         background: '#f5f5f5',
+        overflow: 'auto',
       }}
     >
       {/* Header */}
@@ -201,7 +203,7 @@ export  const SearchArticlesPage=()=> {
           justify="space-between"
           style={{
             maxWidth: 1200,
-            margin: "0 auto",
+            margin: "auto",
             height: 64,
           }}
         >
@@ -221,6 +223,7 @@ export  const SearchArticlesPage=()=> {
       <Content
         style={{
           maxWidth: 1200,
+          minHeight: 0,
           margin: '0 auto',
           padding: 24,
         }}
@@ -232,7 +235,6 @@ export  const SearchArticlesPage=()=> {
             marginBottom: 24,
           }}
         >
-          {/*ArticleSearchForm*/}
           <ArticleSearchForm
             key={`form-${searchRequest.supplierId || 'none'}`}
             onSubmit={handleSearch}
@@ -284,13 +286,12 @@ export  const SearchArticlesPage=()=> {
               {/*  }}*/}
               {/*/>*/}
             </Flex>
-            {data.items[0].normalizedDescription}
-            {data.items[1].normalizedDescription}
-            {/*<ArticleList*/}
-            {/*  articles={data.items}*/}
-            {/*  isLoading={isLoading}*/}
-            {/*  viewMode={viewMode}*/}
-            {/*/>*/}
+
+            <ArticleList
+              articles={data.items}
+              isLoading={isLoading}
+              viewMode={'rows'}
+            />
 
             <Pagination
               current={data.page}

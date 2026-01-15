@@ -27,7 +27,7 @@ interface Props {
   initialSupplierId?: number
   initialSortBy?: 'relevance' | 'foundString' | 'description'
   initialSortDescending?: boolean
-  onSupplierChange?: (supplierId: number | undefined, supplierName?: string) => void
+  onSupplierChange?: (supplierName?: string) => void
 }
 
 export function ArticleSearchForm({
@@ -92,7 +92,7 @@ export function ArticleSearchForm({
     setShowHistory(false)
 
     // Уведомляем родителя об изменении поставщика для истории
-    if (onSupplierChange) onSupplierChange(supplierId, supplierName)
+    if (onSupplierChange) onSupplierChange(supplierName)
   }
 
   const handleHistorySelect = (item: SearchHistoryItem) => {
@@ -105,7 +105,7 @@ export function ArticleSearchForm({
     setShowHistory(false)
     onSubmit(request)
 
-    if (onSupplierChange) onSupplierChange(item.supplierId, item.supplierName)
+    if (onSupplierChange) onSupplierChange(item.supplierName)
   }
 
   const handleRemoveHistoryItem = (id: string, e: React.MouseEvent) => {
