@@ -137,7 +137,7 @@ export function ArticleList({
         onRow={(record) => ({
           onClick: () =>
             navigate(
-              `/articles/${record.supplierId}/${record.dataSupplierArticleNumber}`
+              `/tecdoc/articles/${record.supplierId}/${record.dataSupplierArticleNumber}`
             ),
           style: { cursor: 'pointer' },
         })}

@@ -154,7 +154,7 @@ export  const SearchArticlesPage=()=> {
       }
     }
 
-    const newUrl = params.toString() ? `tecdoc/search/articles?${params.toString()}` : 'tecdoc/search/articles'
+    const newUrl = params.toString() ? `/tecdoc/search/articles?${params.toString()}` : '/tecdoc/search/articles'
     navigate(newUrl)
   }
 
