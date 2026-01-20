@@ -1,5 +1,5 @@
 import type {ArticleSearchRequest, ArticleSearchResult} from '../../../../api/TecDoc/api/types.ts';
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {useSearchParams, useNavigate, Link} from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Layout, Card, Typography, Alert, Flex } from 'antd'
@@ -14,6 +14,7 @@ import {ArticleList} from '../../../ui/tecDoc/ArticleList.tsx';
 import {ViewToggle} from '../../../ui/view-toggle.tsx';
 import {getViewMode, setViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
 import {Pagination} from '../../../ui/Pagination.tsx';
+import {parseArticleSearchParams, ROUTE_GENERATE_TEC_DOC} from '../../constants/routes.ts';
 
 
 const { Header, Content } = Layout
@@ -24,69 +25,36 @@ export  const SearchArticlesPage=()=> {
   const navigate = useNavigate()
 
   // Читаем параметры из URL или из sessionStorage
-  const getInitialParams = useCallback(() => {
-    // Сначала проверяем URL параметры
-    const q = searchParams.get('q')
-    const supplierId = searchParams.get('supplierId')
-    const sortBy = searchParams.get('sortBy')
-    const sortDescending = searchParams.get('sortDescending')
-    const page = searchParams.get('page')
-    const pageSize = searchParams.get('pageSize')
-
-    // Если есть параметры в URL, используем их
-    if (q !== null || supplierId !== null || sortBy !== null || sortDescending !== null || page !== null || pageSize !== null) {
-      return {
-        query: q || '',
-        supplierId: supplierId ? parseInt(supplierId) : undefined,
-        sortBy: (sortBy as 'relevance' | 'foundString' | 'description') || 'relevance',
-        sortDescending: sortDescending === 'true',
-        page: parseInt(page || '1'),
-        pageSize: parseInt(pageSize || '20'),
-      }
+  const getInitialParams = useCallback((): ArticleSearchRequest => {
+    // 1. Пробуем взять из URL
+    if ([...searchParams.keys()].length > 0) {
+      return parseArticleSearchParams(searchParams)
     }
 
-
-    // Иначе пытаемся восстановить из sessionStorage
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = sessionStorage.getItem('articleSearchParams')
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          return {
-            query: parsed.query || '',
-            supplierId: parsed.supplierId,
-            sortBy: parsed.sortBy || 'relevance',
-            sortDescending: parsed.sortDescending || false,
-            page: parsed.page || 1,
-            pageSize: parsed.pageSize || 20,
-          }
-        }
-      } catch (e) {
-        // Игнорируем ошибки парсинга
+    // 2. Иначе — sessionStorage
+    try {
+      const saved = sessionStorage.getItem('articleSearchParams')
+      if (saved) {
+        return JSON.parse(saved) as ArticleSearchRequest
       }
+    } catch {
+      // ignore
     }
 
-    // Значения по умолчанию
+    // 3. Дефолты
     return {
       query: '',
       supplierId: undefined,
-      sortBy: 'relevance' as const,
+      sortBy: 'relevance',
       sortDescending: false,
       page: 1,
       pageSize: 20,
     }
   }, [searchParams])
 
-  const initialParams = useMemo(() => getInitialParams(), [getInitialParams])
-
-  const [searchRequest, setSearchRequest] = useState<ArticleSearchRequest>({
-    query: initialParams.query,
-    page: initialParams.page,
-    pageSize: initialParams.pageSize,
-    sortBy: initialParams.sortBy,
-    sortDescending: initialParams.sortDescending,
-    supplierId: initialParams.supplierId,
-  })
+  const [searchRequest, setSearchRequest] = useState<ArticleSearchRequest>(() =>
+    getInitialParams()
+  )
 
   const [currentSupplierName, setCurrentSupplierName] = useState<string | undefined>()
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
@@ -98,64 +66,26 @@ export  const SearchArticlesPage=()=> {
 
   // Синхронизируем состояние с URL при изменении параметров URL
   useEffect(() => {
-    const params = getInitialParams()
-    setSearchRequest({
-      query: params.query,
-      page: params.page,
-      pageSize: params.pageSize,
-      sortBy: params.sortBy,
-      sortDescending: params.sortDescending,
-      supplierId: params.supplierId,
-    })
+    setSearchRequest(getInitialParams())
   }, [searchParams, getInitialParams])
 
 
   // Функция для обновления URL параметров и sessionStorage
   const updateUrlParams = (request: ArticleSearchRequest) => {
-    const params = new URLSearchParams()
-
-    if (request.query) {
-      params.set('q', request.query)
+    // 1. Сохраняем в sessionStorage
+    try {
+      sessionStorage.setItem(
+        'articleSearchParams',
+        JSON.stringify(request)
+      )
+    } catch {
+      // ignore
     }
 
-    if (request.supplierId !== undefined) {
-      params.set('supplierId', request.supplierId.toString())
-    }
-
-    if (request.sortBy && request.sortBy !== 'relevance') {
-      params.set('sortBy', request.sortBy)
-    }
-
-    if (request.sortDescending) {
-      params.set('sortDescending', 'true')
-    }
-
-    if (request.page && request.page > 1) {
-      params.set('page', request.page.toString())
-    }
-
-    if (request.pageSize && request.pageSize !== 20) {
-      params.set('pageSize', request.pageSize.toString())
-    }
-
-    // Сохраняем параметры в sessionStorage
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem('articleSearchParams', JSON.stringify({
-          query: request.query || '',
-          supplierId: request.supplierId,
-          sortBy: request.sortBy,
-          sortDescending: request.sortDescending,
-          page: request.page,
-          pageSize: request.pageSize,
-        }))
-      } catch (e) {
-        // Игнорируем ошибки сохранения
-      }
-    }
-
-    const newUrl = params.toString() ? `/tecdoc/search/articles?${params.toString()}` : '/tecdoc/search/articles'
-    navigate(newUrl)
+    // 2. Генерируем URL через роутер
+    navigate(
+      ROUTE_GENERATE_TEC_DOC.articleSearch(request)
+    )
   }
 
   const { data, isLoading, error } = useQuery<ArticleSearchResult, ApiError>({

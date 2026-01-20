@@ -2,6 +2,7 @@ import {Link} from 'react-router-dom'
 import { Layout, Button, Typography, Row, Col, Space } from 'antd'
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons'
 import './tecDoc.css'
+import {ROUTE_TEC_DOC} from './constants/routes.ts';
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph } = Typography
@@ -17,8 +18,8 @@ export const TecDocPage = () => {
           </Title>
 
           <Space size="large">
-            <Link  to="/tecdoc/search/articles" className={'header-link'}>Поиск артикулов</Link>
-            <Link to="/tecdoc/search/suppliers" className={'header-link'}>Поиск поставщиков</Link>
+            <Link  to={ROUTE_TEC_DOC.SEARCH_ARTICLES} className={'header-link'}>Поиск артикулов</Link>
+            <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS} className={'header-link'}>Поиск поставщиков</Link>
           </Space>
         </div>
       </Header>
@@ -34,13 +35,13 @@ export const TecDocPage = () => {
 
           {/* Actions */}
           <Space size="middle" wrap>
-            <Link to="/tecdoc/search/articles">
+            <Link to={ROUTE_TEC_DOC.SEARCH_ARTICLES}>
               <Button type="primary" size="large" icon={<SearchOutlined />}>
                 Поиск артикулов
               </Button>
             </Link>
 
-            <Link to="/tecdoc/search/suppliers">
+            <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS}>
               <Button size="large" icon={<TeamOutlined />}>
                 Поиск поставщиков
               </Button>

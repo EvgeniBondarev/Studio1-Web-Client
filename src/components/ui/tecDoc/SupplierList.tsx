@@ -3,6 +3,7 @@ import {Card, Table, Empty, Row, Col, Tag, Space, Skeleton} from 'antd'
 import {BuildOutlined, PauseOutlined, CalendarOutlined} from '@ant-design/icons'
 import type {SupplierDocument} from '../../../api/TecDoc/api/types.ts';
 import {formatDate} from '../../../api/TecDoc/utils.ts';
+import {ROUTE_GENERATE_TEC_DOC} from '../../tecDocPage/constants/routes.ts';
 
 
 interface Props {
@@ -115,7 +116,7 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
     const dataSource = suppliers.map(supplier => ({
       key: supplier.id,
       ...supplier,
-      onClick: () => navigate(`/tecdoc/suppliers/${supplier.supplierId}`),
+      onClick: () => navigate(ROUTE_GENERATE_TEC_DOC.supplierDetail(supplier.supplierId)),
     }))
 
     return (
@@ -156,7 +157,7 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
         <Col xs={24} sm={12} lg={8} key={supplier.id}>
           <Card
             hoverable
-            onClick={() => navigate(`/tecdoc/suppliers/${supplier.supplierId}`)}
+            onClick={() => navigate(ROUTE_GENERATE_TEC_DOC.supplierDetail(supplier.supplierId))}
             style={{
               height: '100%',
               border: '1px solid #f0f0f0',

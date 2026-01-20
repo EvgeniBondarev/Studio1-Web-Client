@@ -15,6 +15,8 @@ import {
   MainInfo, NewNumbers,
   OEMNumbers
 } from '../../../ui/tecDoc/articleDetails';
+import {ROUTE_GENERATE_TEC_DOC, ROUTE_TEC_DOC} from '../../constants/routes.ts';
+import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 
 const {Text} = Typography;
 const {Header, Content} = Layout
@@ -38,8 +40,6 @@ function getLinkageTypeLabel(typeId: string): string {
   return typeMap[typeId] || typeId
 }
 
-const DEFAULT_URL = '/tecdoc/search/articles'
-
 // ================= page =================
 
 export const ArticleDetailPage = () => {
@@ -49,44 +49,20 @@ export const ArticleDetailPage = () => {
   const supplierIdNum = Number(supplierId)
 
   // Состояние для URL поиска с сохраненными параметрами
-  const [searchUrl, setSearchUrl] = useState(DEFAULT_URL)
+  const [searchUrl, setSearchUrl] = useState<string>(ROUTE_TEC_DOC.SEARCH_ARTICLES)
 
   // Восстанавливаем URL поиска из sessionStorage при монтировании
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem('articleSearchParams')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        const params = new URLSearchParams()
+      if (!saved) return
 
-        if (parsed.query) {
-          params.set('q', parsed.query)
-        }
+      const parsed: ArticleSearchRequest = JSON.parse(saved)
 
-        if (parsed.supplierId !== undefined) {
-          params.set('supplierId', parsed.supplierId.toString())
-        }
-
-        if (parsed.sortBy && parsed.sortBy !== 'relevance') {
-          params.set('sortBy', parsed.sortBy)
-        }
-
-        if (parsed.sortDescending) {
-          params.set('sortDescending', 'true')
-        }
-
-        if (parsed.page && parsed.page > 1) {
-          params.set('page', parsed.page.toString())
-        }
-
-        if (parsed.pageSize && parsed.pageSize !== 20) {
-          params.set('pageSize', parsed.pageSize.toString())
-        }
-
-        const queryString = params.toString()
-        setSearchUrl(queryString ? `${DEFAULT_URL}?${queryString}` : DEFAULT_URL)
-      }
-    } catch (e) {
+      setSearchUrl(
+        ROUTE_GENERATE_TEC_DOC.articleSearch(parsed)
+      )
+    } catch {
       // Игнорируем ошибки
     }
   }, [])
@@ -352,13 +328,13 @@ export const ArticleDetailPage = () => {
             {/* Аксессуары */}
             <Accessories
               accessories={accessories}
-              url={DEFAULT_URL}
+              url={ROUTE_TEC_DOC.SEARCH_ARTICLES}
             />
 
             {/* Новые номера */}
             <NewNumbers
               newNumbers={newNumbers}
-              url={DEFAULT_URL}
+              url={ROUTE_TEC_DOC.SEARCH_ARTICLES}
             />
           </Col>
         </Row>

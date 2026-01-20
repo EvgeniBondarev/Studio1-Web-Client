@@ -5,8 +5,7 @@ import type { ColumnsType } from 'antd/es/table'
 import type {ArticleDocument} from '../../../api/TecDoc/api/types.ts';
 import type {ViewMode} from '../../../api/TecDoc/utils/view-preferences.ts';
 import {formatDate} from '../../../api/TecDoc/utils.ts';
-
-
+import {ROUTE_GENERATE_TEC_DOC} from '../../tecDocPage/constants/routes.ts';
 
 interface ArticleListProps {
   articles: ArticleDocument[]
@@ -136,9 +135,7 @@ export function ArticleList({
         pagination={false}
         onRow={(record) => ({
           onClick: () =>
-            navigate(
-              `/tecdoc/articles/${record.supplierId}/${record.dataSupplierArticleNumber}`
-            ),
+            navigate(ROUTE_GENERATE_TEC_DOC.articleDetail(record.supplierId,record.dataSupplierArticleNumber)),
           style: { cursor: 'pointer' },
         })}
       />
@@ -159,9 +156,7 @@ export function ArticleList({
           key={article.id}
           hoverable
           onClick={() =>
-            navigate(
-              `/articles/${article.supplierId}/${article.dataSupplierArticleNumber}`
-            )
+            navigate(ROUTE_GENERATE_TEC_DOC.articleDetail(article.supplierId,article.dataSupplierArticleNumber))
           }
           style={{
             height: '100%',

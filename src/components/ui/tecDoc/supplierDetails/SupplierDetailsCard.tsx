@@ -5,6 +5,7 @@ import type {SupplierInfoDto} from '../../../../api/TecDoc/api/types.ts';
 import type {SupplierDetailDto} from '../../../../api/TecDoc/api/services/supplier.service.ts';
 import {MainInfo} from './MainInfo.tsx';
 import {ContactCard} from './ContactCard.tsx';
+import {ROUTE_GENERATE_TEC_DOC} from '../../../tecDocPage/constants/routes.ts';
 
 const {Title, Text} = Typography
 
@@ -76,7 +77,9 @@ export const SupplierDetailsCard = ({supplier, details}: Props) => {
         {/* Ссылка на артикулы */}
         <Space orientation="vertical" style={{ width: '100%' }}>
           <Divider size={'small'}/>
-          <Link to={`/tecdoc/search/articles?supplierId=${supplier.id}`}>
+          <Link to={ROUTE_GENERATE_TEC_DOC.articleSearch({
+            supplierId: supplier.id,
+          })}>
             <Button type="primary" icon={<InboxOutlined />} size="large">
               Найти артикулы этого поставщика
             </Button>

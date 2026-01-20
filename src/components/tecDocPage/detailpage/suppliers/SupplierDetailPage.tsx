@@ -9,6 +9,7 @@ import {type SupplierDetailResponse, supplierService} from '../../../../api/TecD
 import type {ApiError} from '../../../../api/TecDoc/api/client.ts'
 import '../../tecDoc.css'
 import {SupplierDetailsCard} from '../../../ui/tecDoc/supplierDetails/SupplierDetailsCard.tsx'
+import {ROUTE_TEC_DOC} from '../../constants/routes.ts';
 
 const {Header, Content} = Layout
 const {Text} = Typography
@@ -93,7 +94,7 @@ export const SupplierDetailPage = () => {
               description={
                 <Space orientation="vertical" size={0}>
                   <Text>Поставщик с ID {supplierId} не найден в системе.</Text>
-                  <Link to="/tecdoc/search/suppliers">
+                  <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS}>
                     Вернуться к поиску поставщиков
                   </Link>
                 </Space>
@@ -121,7 +122,7 @@ export const SupplierDetailPage = () => {
           padding: `16px 24px`,
         }}>
           <Flex align="center">
-            <Link to="/tecdoc/search/suppliers" className="header-link">
+            <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS} className="header-link">
               <Space size={6}>
                 <ArrowLeftOutlined/>
                 <span>Назад к поиску поставщиков</span>
