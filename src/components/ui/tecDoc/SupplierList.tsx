@@ -115,7 +115,7 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
     const dataSource = suppliers.map(supplier => ({
       key: supplier.id,
       ...supplier,
-      onClick: () => navigate(`/suppliers/${supplier.supplierId}`),
+      onClick: () => navigate(`/tecdoc/suppliers/${supplier.supplierId}`),
     }))
 
     return (
@@ -156,7 +156,7 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
         <Col xs={24} sm={12} lg={8} key={supplier.id}>
           <Card
             hoverable
-            onClick={() => navigate(`/suppliers/${supplier.supplierId}`)}
+            onClick={() => navigate(`/tecdoc/suppliers/${supplier.supplierId}`)}
             style={{
               height: '100%',
               border: '1px solid #f0f0f0',
@@ -187,7 +187,7 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
             </div>
 
             <div style={{ marginTop: 'auto' }}>
-              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                 {supplier.nbrOfArticles !== undefined && (
                   <Space size="small" style={{ color: '#666', fontSize: '14px' }}>
                     <PauseOutlined />
