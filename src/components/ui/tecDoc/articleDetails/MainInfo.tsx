@@ -1,13 +1,13 @@
-import {Card, Col, Divider, Row, Typography} from 'antd';
-import type {ArticleInfoDto, SupplierInfoDto } from '../../../../api/TecDoc/api/types.ts';
+import {Card, Col, Divider, Row, Typography, Space, Flex} from 'antd';
+import type {ArticleInfoDto, SupplierInfoDto} from '../../../../api/TecDoc/api/types.ts';
 
-const { Title, Text, Paragraph } = Typography;
-type Props={
-  article:  ArticleInfoDto
-  supplier?:SupplierInfoDto
+const {Title, Text} = Typography;
+type Props = {
+  article: ArticleInfoDto
+  supplier?: SupplierInfoDto
 }
 
-export const MainInfo=({article,supplier }:Props)=>{
+export const MainInfo = ({article, supplier}: Props) => {
 
   function FlagItem({
                       label,
@@ -21,7 +21,7 @@ export const MainInfo=({article,supplier }:Props)=>{
     falseColor?: string
   }) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Flex gap={8} align={'center'}>
       <span
         style={{
           width: 12,
@@ -31,124 +31,120 @@ export const MainInfo=({article,supplier }:Props)=>{
           display: 'inline-block',
         }}
       />
-        <Text style={{ fontSize: 13 }}>
+        <Text style={{fontSize: 12}}>
           {label}: {value ? 'Да' : 'Нет'}
         </Text>
-      </div>
+      </Flex>
     )
   }
 
   return (
-    <Card>
-      <Title level={3} style={{ marginBottom: 8 }}>
-        {article.dataSupplierArticleNumber}
-      </Title>
+    <Card
+      title={
+        <Title level={3} style={{margin: 0}}>
+          {article.dataSupplierArticleNumber}
+        </Title>
+      }
+    >
 
       {supplier && (
-        <div style={{ marginBottom: 16 }}>
-          <Text type="secondary">
-            Поставщик: {supplier.description}
-          </Text>
+        <div>
+          <Space orientation="vertical" size={2} style={{marginBottom: 10}}>
 
-          {supplier.matchcode && (
-            <div>
+            <Text type="secondary" style={{display: 'block'}}>
+              Поставщик: {supplier.description}
+            </Text>
+
+            {supplier.matchcode && (
               <Text type="secondary">
                 Код: {supplier.matchcode}
               </Text>
-            </div>
-          )}
+            )}
 
-          {supplier.dataVersion && (
-            <div>
+            {supplier.dataVersion && (
               <Text type="secondary">
                 Версия данных: {supplier.dataVersion}
               </Text>
-            </div>
-          )}
+            )}
 
-          {supplier.nbrOfArticles !== undefined && (
-            <div>
+            {supplier.nbrOfArticles !== undefined && (
               <Text type="secondary">
                 Артикулов: {supplier.nbrOfArticles.toLocaleString()}
               </Text>
-            </div>
-          )}
+            )}
+          </Space>
         </div>
       )}
 
-      <div style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ marginBottom: 8 }}>
+      <Space orientation="vertical" size={1}>
+        <Title level={4} style={{margin: 0}}>
           Описание
         </Title>
-        <Paragraph style={{ color: '#595959' }}>
+        <Text type={'secondary'}>
           {article.normalizedDescription || article.description}
-        </Paragraph>
-      </div>
+        </Text>
+      </Space>
 
       {article.description &&
         article.description !== article.normalizedDescription && (
-          <div style={{ marginBottom: 16 }}>
-            <Title level={4} style={{ marginBottom: 8 }}>
+          <Space orientation="vertical" size={1}>
+            <Title level={4} style={{margin: 0}}>
               Дополнительное описание
             </Title>
-            <Paragraph style={{ color: '#8c8c8c' }}>
+            <Text type={'secondary'}>
               {article.description}
-            </Paragraph>
-          </div>
+            </Text>
+          </Space>
         )}
 
-      <Divider />
+      <Divider size={'small'}/>
 
       <Row gutter={[16, 16]}>
         <Col span={12}>
-          <Text type="secondary">Found String:</Text>
-          <div>
-            <Text
-              style={{
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: '#262626',
-              }}
-            >
+          <Space orientation={'vertical'} size={1}>
+            <Text type="secondary">Found String:</Text>
+            <Text strong>
               {article.foundString}
             </Text>
-          </div>
+          </Space>
         </Col>
 
         {article.quantityPerPackingUnit !== undefined && (
           <Col span={12}>
-            <Text type="secondary">Количество в упаковке:</Text>
-            <div>
+            <Space orientation={'vertical'} size={1}>
+              <Text type="secondary">Количество в упаковке:</Text>
               <Text strong>
                 {article.quantityPerPackingUnit} шт.
               </Text>
-            </div>
+            </Space>
           </Col>
         )}
 
         <Col span={12}>
-          <Text type="secondary">Статус:</Text>
-          <div>
-            <Text strong>{article.articleStateDisplayValue}</Text>
-          </div>
+          <Space orientation={'vertical'} size={1}>
+            <Text type="secondary">Статус:</Text>
+            <Text strong>
+              {article.articleStateDisplayValue}
+            </Text>
+          </Space>
         </Col>
 
         <Col span={12}>
-          <Text type="secondary">Supplier ID:</Text>
-          <div>
-            <Text strong>{article.supplierId}</Text>
-          </div>
+          <Space orientation={'vertical'} size={1}>
+            <Text type="secondary">Supplier ID:</Text>
+            <Text strong>
+              {article.supplierId}
+            </Text>
+          </Space>
         </Col>
       </Row>
 
-      <Divider />
+      <Divider size={'small'}/>
 
       <div>
-        <Title level={4} style={{ marginBottom: 16 }}>
-          Флаги
-        </Title>
+        <Title level={4}>Флаги</Title>
 
-        <Row gutter={[16, 12]}>
+        <Row gutter={[16, 12]} style={{rowGap: 6}}>
           <Col span={8}>
             <FlagItem label="Валидный" value={article.flags.isValid}
                       trueColor="#52c41a"

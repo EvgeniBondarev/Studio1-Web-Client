@@ -1,66 +1,96 @@
-import {Card, Typography} from 'antd';
+import {Card, Typography, List, Tag, Space, Divider} from 'antd';
 import type {NewNumberDto} from '../../../../api/TecDoc/api/types.ts';
 
 type Props = {
   newNumbers: NewNumberDto[]
-  url:string
+  url: string
 }
 
 export const NewNumbers = ({newNumbers, url}: Props) => {
   return (
-    <Card style={{marginBottom: 24}}>
-      <div style={{padding: '16px 24px', borderBottom: '1px solid #f0f0f0',}}>
-        <Typography.Title level={5} style={{margin: 0}}>
-          Новые номера ({newNumbers.length})
-        </Typography.Title>
-      </div>
+    <Card
+      title={<Typography.Title level={4}>
+        Новые номера ({newNumbers.length})
+      </Typography.Title>}
+    >
+      {newNumbers.length > 0 ? (
+        <List
+          dataSource={newNumbers}
+          renderItem={(newNum, idx) => (
+            <List.Item
+              key={idx}
+              style={{
+                border: '1px solid #d9d9d9',
+                borderRadius: 4,
+                padding: 8,
+                marginBottom: 8
+              }}
+            >
+              <Space orientation="vertical" style={{width: '100%'}}>
+                <div>
+                  <a
+                    href={`${url}/${newNum.newSupplierId}/${newNum.newDataSupplierArticleNumber}`}
+                    style={{
+                      color: '#2563eb',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      fontSize: 14
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                    onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                  >
+                    {newNum.newDataSupplierArticleNumber}
+                  </a>
+                  <Typography.Text
+                    type="secondary"
+                    style={{
+                      fontSize: 10,
+                      display: 'block',
+                      marginTop: 2
+                    }}
+                  >
+                    Supplier ID: {newNum.newSupplierId}
+                  </Typography.Text>
+                </div>
 
-      <div style={{padding: 24}}>
-        {newNumbers.length > 0 ? (
-          <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-            {newNumbers.map((newNum, idx) => (
-              <div
-                key={idx}
-                style={{padding: 8, border: '1px solid #d9d9d9', borderRadius: 4,}}
-              >
-                <a
-                  href={`${url}/${newNum.newSupplierId}/${newNum.newDataSupplierArticleNumber}`}
-                  style={{color: '#2563eb', fontWeight: 600, textDecoration: 'none'}}
-                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-                >
-                  {newNum.newDataSupplierArticleNumber}
-                </a>
-                <p style={{fontSize: 10, color: '#6b7280', margin: '4px 0 0 0'}}>
-                  Supplier ID: {newNum.newSupplierId}
-                </p>
                 {newNum.newSupplier && (
-                  <div style={{marginTop: 4, fontSize: 12, color: '#374151'}}>
-                    <p style={{margin: 0}}>{newNum.newSupplier.description}</p>
-                    {newNum.newSupplier.matchcode && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Код: {newNum.newSupplier.matchcode}
-                      </p>
-                    )}
-                    {newNum.newSupplier.dataVersion && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Версия: {newNum.newSupplier.dataVersion}
-                      </p>
-                    )}
-                    {newNum.newSupplier.nbrOfArticles !== undefined && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Артикулов: {newNum.newSupplier.nbrOfArticles.toLocaleString()}
-                      </p>
-                    )}
-                  </div>
+                  <>
+                    <Divider style={{margin: '8px 0'}}/>
+
+                    <Typography.Text style={{fontSize: 12}}>
+                      {newNum.newSupplier.description}
+                    </Typography.Text>
+
+                    <Space size={[8, 4]} wrap style={{marginTop: 4}}>
+                      {newNum.newSupplier.matchcode && (
+                        <Tag color="default" style={{fontSize: 10, margin: 0}}>
+                          Код: {newNum.newSupplier.matchcode}
+                        </Tag>
+                      )}
+
+                      {newNum.newSupplier.dataVersion && (
+                        <Tag color="default" style={{fontSize: 10, margin: 0}}>
+                          Версия: {newNum.newSupplier.dataVersion}
+                        </Tag>
+                      )}
+
+                      {newNum.newSupplier.nbrOfArticles !== undefined && (
+                        <Tag color="blue" style={{fontSize: 10, margin: 0}}>
+                          Артикулов: {newNum.newSupplier.nbrOfArticles.toLocaleString()}
+                        </Tag>
+                      )}
+                    </Space>
+                  </>
                 )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{color: '#6b7280', fontSize: 12}}>Новые номера не найдены</p>
-        )}
-      </div>
+              </Space>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Typography.Text type="secondary">
+          Новые номера не найдены
+        </Typography.Text>
+      )}
     </Card>
   )
 }

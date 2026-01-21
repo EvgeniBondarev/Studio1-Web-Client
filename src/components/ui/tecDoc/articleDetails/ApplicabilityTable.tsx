@@ -1,5 +1,5 @@
 import {LinkOutlined} from '@ant-design/icons';
-import {Card, Input, Typography} from 'antd';
+import {Card, Empty, Input, Space, Typography} from 'antd';
 import {PaginatedTable} from '../../paginated-table.tsx';
 import {ExpandableLinkageRow} from '../../expandable-linkage-row.tsx';
 import type {LinkageDto} from '../../../../api/TecDoc/api/types.ts';
@@ -10,7 +10,6 @@ type Props = {
   linkagesSearch: string
   globalSearch: string
   setLinkagesSearch: (value: string) => void
-  getLinkageTypeLabel: any
 }
 
 export const ApplicabilityTable = ({
@@ -19,33 +18,25 @@ export const ApplicabilityTable = ({
                                      globalSearch,
                                      linkagesSearch,
                                      setLinkagesSearch,
-                                     getLinkageTypeLabel
                                    }: Props) => {
   return (
-    <Card id="linkages-table" style={{marginBottom: 24}}>
-      <div style={{
-        padding: '16px 24px',
-        borderBottom: '1px solid #f0f0f0',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}>
-        <LinkOutlined style={{width: 20, height: 20}}/>
-        <Typography.Title level={4} style={{margin: 0}}>
-          Применимость ({filteredLinkages.length}
-          {linkagesSearch || globalSearch ? ` из ${linkagesLength}` : ''})
-        </Typography.Title>
-      </div>
-      
-      <div style={{padding: 24}}>
-        <div style={{marginBottom: 16}}>
-          <Input
-            value={linkagesSearch}
-            onChange={(e) => setLinkagesSearch(e.target.value)}
-            placeholder="Поиск по типу, ID, транспортному средству, модели, производителю, характеристикам..."
-            allowClear
-          />
-        </div>
+    <Card id="linkages-table" style={{marginBottom: 24}}
+          title={<Space align="center" size={8} style={{width: '100%'}}>
+            <LinkOutlined style={{width: 20, height: 20}}/>
+            <Typography.Title level={4} style={{margin: 0, flex: 1}}>
+              Применимость ({filteredLinkages.length}
+              {linkagesSearch || globalSearch ? ` из ${linkagesLength}` : ''})
+            </Typography.Title>
+          </Space>}
+    >
+
+      <Space orientation="vertical" size={16} style={{width: '100%'}}>
+        <Input
+          value={linkagesSearch}
+          onChange={(e) => setLinkagesSearch(e.target.value)}
+          placeholder="Поиск по типу, ID, транспортному средству, модели, производителю, характеристикам..."
+          allowClear
+        />
 
         {filteredLinkages.length > 0 ? (
           <PaginatedTable
@@ -54,7 +45,7 @@ export const ApplicabilityTable = ({
             showAllThreshold={50}
             headers={
               <thead>
-              <tr style={{borderBottom: '1px solid #e5e7eb', backgroundColor: '#fafafa',}}>
+              <tr style={{borderBottom: '1px solid #e5e7eb', backgroundColor: '#fafafa'}}>
                 {[
                   '№',
                   'Тип',
@@ -68,13 +59,13 @@ export const ApplicabilityTable = ({
                     key={idx}
                     style={{
                       textAlign: 'left',
-                      padding: '12px 16px',
-                      fontWeight: 600,
-                      color: '#4b5563',
-                      fontSize: 12,
+                      padding: 8,
                     }}
                   >
-                    {header}
+                    <Typography.Text type="secondary" style={{fontSize: 12}}>
+                      {header}
+                    </Typography.Text>
+
                   </th>
                 ))}
               </tr>
@@ -85,20 +76,15 @@ export const ApplicabilityTable = ({
                 key={`linkage-${idx}`}
                 linkage={linkage}
                 index={idx}
-                getLinkageTypeLabel={getLinkageTypeLabel}
               />
             )}
           />
         ) : linkagesSearch || globalSearch ? (
-          <p style={{color: '#6b7280', fontSize: 12, textAlign: 'center', padding: '32px 0',}}>
-            По запросу &quot;{linkagesSearch || globalSearch}&quot; ничего не найдено
-          </p>
+          <Empty description={`По запросу ${linkagesSearch || globalSearch} ничего не найдено`}/>
         ) : (
-          <p style={{color: '#6b7280', fontSize: 12}}>
-            Применимость не найдена
-          </p>
+          <Empty description={'Применимость не найдена'}/>
         )}
-      </div>
+      </Space>
     </Card>
   )
 }

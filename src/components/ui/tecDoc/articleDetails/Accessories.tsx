@@ -1,65 +1,97 @@
-import {Card, Typography} from 'antd';
+import {Card, Typography, List, Tag, Space, Divider} from 'antd';
 import type {AccessoryDto} from '../../../../api/TecDoc/api/types.ts';
 
 type Props = {
   accessories: AccessoryDto[]
-  url:string
+  url: string
 }
-export const Accessories = ({accessories,url}: Props) => {
-  return (
-    <Card style={{marginBottom: 24}}>
-      <div style={{padding: '16px 24px', borderBottom: '1px solid #f0f0f0',}}>
-        <Typography.Title level={5} style={{margin: 0}}>
-          Аксессуары ({accessories.length})
-        </Typography.Title>
-      </div>
 
-      <div style={{padding: 24}}>
-        {accessories.length > 0 ? (
-          <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-            {accessories.map((acc, idx) => (
-              <div
-                key={idx}
-                style={{padding: 8, border: '1px solid #d9d9d9', borderRadius: 4,}}
-              >
-                <a
-                  href={`${url}/${acc.accSupplierId}/${acc.accDataSupplierArticleNumber}`}
-                  style={{color: '#2563eb', fontWeight: 600, textDecoration: 'none'}}
-                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-                >
-                  {acc.accDataSupplierArticleNumber}
-                </a>
-                <p style={{fontSize: 10, color: '#6b7280', margin: '4px 0 0 0'}}>
-                  Supplier ID: {acc.accSupplierId}
-                </p>
+export const Accessories = ({accessories, url}: Props) => {
+  return (
+    <Card
+      title={<Typography.Title level={4}>
+        Аксессуары ({accessories.length})
+      </Typography.Title>}
+    >
+      {accessories.length > 0 ? (
+        <List
+          dataSource={accessories}
+          renderItem={(acc, idx) => (
+            <List.Item
+              key={idx}
+              style={{
+                border: '1px solid #d9d9d9',
+                borderRadius: 4,
+                padding: 8,
+                marginBottom: 8
+              }}
+            >
+              <Space orientation="vertical" style={{width: '100%'}}>
+                <div>
+                  <a
+                    href={`${url}/${acc.accSupplierId}/${acc.accDataSupplierArticleNumber}`}
+                    style={{
+                      color: '#2563eb',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      fontSize: 14
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                    onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                  >
+                    {acc.accDataSupplierArticleNumber}
+                  </a>
+                  <Typography.Text
+                    type="secondary"
+                    style={{
+                      fontSize: 10,
+                      display: 'block',
+                      marginTop: 2
+                    }}
+                  >
+                    Supplier ID: {acc.accSupplierId}
+                  </Typography.Text>
+                </div>
+
                 {acc.accSupplier && (
-                  <div style={{marginTop: 4, fontSize: 12, color: '#374151'}}>
-                    <p style={{margin: 0}}>{acc.accSupplier.description}</p>
-                    {acc.accSupplier.matchcode && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Код: {acc.accSupplier.matchcode}
-                      </p>
-                    )}
-                    {acc.accSupplier.dataVersion && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Версия: {acc.accSupplier.dataVersion}
-                      </p>
-                    )}
-                    {acc.accSupplier.nbrOfArticles !== undefined && (
-                      <p style={{fontSize: 10, color: '#6b7280', margin: '2px 0 0 0'}}>
-                        Артикулов: {acc.accSupplier.nbrOfArticles.toLocaleString()}
-                      </p>
-                    )}
-                  </div>
+                  <>
+                    <Divider style={{margin: '8px 0'}}/>
+
+                    <Typography.Text style={{fontSize: 12}}>
+                      {acc.accSupplier.description}
+                    </Typography.Text>
+
+                    <Space size={[8, 4]} wrap style={{marginTop: 4}}>
+                      {acc.accSupplier.matchcode && (
+                        <Tag color="default" style={{fontSize: 10, margin: 0}}>
+                          Код: {acc.accSupplier.matchcode}
+                        </Tag>
+                      )}
+
+                      {acc.accSupplier.dataVersion && (
+                        <Tag color="default" style={{fontSize: 10, margin: 0}}>
+                          Версия: {acc.accSupplier.dataVersion}
+                        </Tag>
+                      )}
+
+                      {acc.accSupplier.nbrOfArticles !== undefined && (
+                        <Tag color="blue" style={{fontSize: 10, margin: 0}}>
+                          Артикулов: {acc.accSupplier.nbrOfArticles.toLocaleString()}
+                        </Tag>
+                      )}
+                    </Space>
+                  </>
                 )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{color: '#6b7280', fontSize: 12}}>Аксессуары не найдены</p>
-        )}
-      </div>
+              </Space>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Typography.Text type="secondary">
+          Аксессуары не найдены
+        </Typography.Text>
+      )}
+
     </Card>
   )
 }

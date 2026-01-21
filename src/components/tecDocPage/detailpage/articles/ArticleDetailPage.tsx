@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
-import {Spin, Alert, Layout, Row, Col, Typography} from 'antd'
+import {Spin, Alert, Layout, Row, Col, Typography, Space} from 'antd'
 import {LeftCircleOutlined} from '@ant-design/icons'
 import {useQuery} from '@tanstack/react-query'
 import {articleService} from '../../../../api/TecDoc/api/services/article.service.ts';
@@ -24,7 +24,7 @@ const {Header, Content} = Layout
 // ================= utils =================
 
 // Функция для получения расшифровки типа применимости
-function getLinkageTypeLabel(typeId: string): string {
+export function getLinkageTypeLabel(typeId: string): string {
   const typeMap: Record<string, string> = {
     P: 'Легковой автомобиль',
     PassengerCar: 'Легковой автомобиль',
@@ -200,7 +200,6 @@ export const ArticleDetailPage = () => {
           type="error"
           showIcon
           icon={<LeftCircleOutlined/>}
-          // message={`Ошибка: ${error.code}`}
           description={error.message}
         />
       </div>
@@ -229,7 +228,7 @@ export const ArticleDetailPage = () => {
 
       <Content
         style={{
-          maxWidth: 1200,
+          maxWidth: 1400,
           margin: '0 auto',
           padding: '24px 16px',
         }}
@@ -257,6 +256,12 @@ export const ArticleDetailPage = () => {
         <Row gutter={[24, 24]}>
           {/* Основная информация */}
           <Col xs={24} lg={16}>
+            <Space
+              orientation="vertical"
+              size="middle"
+              style={{ width: '100%' }}
+            >
+
             <MainInfo
               article={article}
               supplier={supplier}
@@ -308,18 +313,23 @@ export const ArticleDetailPage = () => {
                 globalSearch={globalSearch}
                 linkagesSearch={linkagesSearch}
                 setLinkagesSearch={setLinkagesSearch}
-                getLinkageTypeLabel={getLinkageTypeLabel}
               />
             )}
+            </Space>
           </Col>
 
           {/* Боковая панель */}
           <Col xs={24} lg={8}>
+            <Space
+              orientation="vertical"
+              size="middle"
+              style={{ width: '100%' }}
+            >
 
             {/* Изображения */}
             <ImgInfo
               images={images}
-              supplierIdNum={supplierId}
+              supplierIdNum={supplierIdNum}
             />
 
             {/* Применимость - краткая информация */}
@@ -336,6 +346,7 @@ export const ArticleDetailPage = () => {
               newNumbers={newNumbers}
               url={ROUTE_TEC_DOC.SEARCH_ARTICLES}
             />
+            </Space>
           </Col>
         </Row>
       </Content>

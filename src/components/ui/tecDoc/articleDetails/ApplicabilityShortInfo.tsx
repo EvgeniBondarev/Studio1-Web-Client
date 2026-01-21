@@ -1,51 +1,41 @@
 import {LinkOutlined} from '@ant-design/icons';
-import {Card, Typography} from 'antd';
+import {Card, Typography, Space} from 'antd';
 
 type Props = {
-  linkagesLength: number;
+  linkagesLength: number
 }
 
-export const ApplicabilityShortInfo =({linkagesLength}:Props)=>{
+export const ApplicabilityShortInfo = ({linkagesLength}: Props) => {
+
   return (
-    <Card style={{marginBottom: 24}}>
-      <div
-        style={{
-          padding: '16px 24px',
-          borderBottom: '1px solid #f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <LinkOutlined style={{width: 20, height: 20}}/>
-        <Typography.Title level={5} style={{margin: 0}}>
+    <Card
+      title={<Space align="center" size={8} style={{width: '100%'}}>
+        <LinkOutlined style={{fontSize: 16}}/>
+        <Typography.Title level={4} style={{margin: 0, flex: 1}}>
           Применимость ({linkagesLength})
         </Typography.Title>
-      </div>
+      </Space>}
+    >
+      {linkagesLength > 0 ? (
+        <Space orientation="vertical" size={8} style={{width: '100%'}}>
+          <Typography.Text type="secondary">
+            Найдено <strong>{linkagesLength}</strong> применений
+          </Typography.Text>
 
-      <div style={{padding: 24}}>
-        {linkagesLength > 0 ? (
-          <>
-            <p style={{fontSize: 12, color: '#6b7280', marginBottom: 8}}>
-              Найдено <span style={{fontWeight: 600}}>{linkagesLength}</span> применений
-            </p>
-            <a
-              href="#linkages-table"
-              style={{
-                fontSize: 12,
-                color: '#2563eb',
-                textDecoration: 'none',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-            >
-              Посмотреть таблицу →
-            </a>
-          </>
-        ) : (
-          <p style={{color: '#6b7280', fontSize: 12}}>Применимость не найдена</p>
-        )}
-      </div>
+          <Typography.Link
+            href="#linkages-table"
+            style={{fontSize: 12}}
+            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+          >
+            Посмотреть таблицу →
+          </Typography.Link>
+        </Space>
+      ) : (
+        <Typography.Text type="secondary" style={{fontSize: 12}}>
+          Применимость не найдена
+        </Typography.Text>
+      )}
     </Card>
   )
 }

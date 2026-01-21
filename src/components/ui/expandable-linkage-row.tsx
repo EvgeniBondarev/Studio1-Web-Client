@@ -1,25 +1,51 @@
-import { useState, Fragment } from 'react'
-import {  Button } from 'antd'
-import { DownOutlined, UpOutlined } from '@ant-design/icons'
+import {useState, Fragment} from 'react'
+import {Button, Card, Space, Table, Tag, Typography} from 'antd'
+import {DownOutlined, UpOutlined} from '@ant-design/icons'
 import type {LinkageDto} from '../../api/TecDoc/api/types.ts';
+import {getLinkageTypeLabel} from '../tecDocPage/detailpage/articles/ArticleDetailPage.tsx';
 
+const {Text, Paragraph} = Typography;
 
 interface ExpandableLinkageRowProps {
   linkage: LinkageDto
   index: number
-  getLinkageTypeLabel: (typeId: string) => string
 }
 
 export function ExpandableLinkageRow({
                                        linkage,
                                        index,
-                                       getLinkageTypeLabel,
                                      }: ExpandableLinkageRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const vehicle = linkage.vehicle
   const model = vehicle?.model
   const manufacturer = model?.manufacturer
   const attributes = vehicle?.attributes || []
+
+  const attributeColumns = [
+    {
+      title: 'Группа',
+      dataIndex: 'attributeGroup',
+      key: 'attributeGroup',
+      render: (text: string) => <Text type="secondary">{text}</Text>,
+    },
+    {
+      title: 'Тип',
+      dataIndex: 'attributeType',
+      key: 'attributeType',
+      render: (text: string) => <Text type="secondary">{text}</Text>,
+    },
+    {
+      title: 'Заголовок',
+      dataIndex: 'displayTitle',
+      key: 'displayTitle',
+    },
+    {
+      title: 'Значение',
+      dataIndex: 'displayValue',
+      key: 'displayValue',
+      render: (text: string) => <Text strong>{text}</Text>,
+    },
+  ]
 
   return (
     <Fragment>
@@ -32,126 +58,140 @@ export function ExpandableLinkageRow({
         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
-        <td style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>{index + 1}</td>
-
-        <td style={{ padding: '8px 12px', fontSize: 12 }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '2px 6px',
-              borderRadius: 4,
-              backgroundColor: '#dbeafe',
-              color: '#1d4ed8',
-              fontWeight: 500,
-              fontSize: 10,
-            }}
-          >
-            {getLinkageTypeLabel(linkage.linkageTypeId)}
-          </span>
-          <span style={{ marginLeft: 4, fontSize: 10, color: '#6b7280' }}>
-            ({linkage.linkageTypeId})
-          </span>
+        <td style={{padding: 12, color: '#6b7280'}}>
+          <Text type="secondary">{index + 1}</Text>
         </td>
 
-        <td style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>
-          {linkage.linkageId}
+        <td style={{padding: 8}}>
+          <Space orientation="vertical" size={1}>
+            <Tag
+              color="blue"
+              style={{
+                fontWeight: 500,
+                fontSize: 10,
+                lineHeight: '14px',
+                padding: '2px 6px',
+              }}
+            >
+              {getLinkageTypeLabel(linkage.linkageTypeId)}
+            </Tag>
+            <Text type="secondary" style={{fontSize: 10}}>
+              ({linkage.linkageTypeId})
+            </Text>
+          </Space>
         </td>
 
-        <td style={{ padding: '8px 12px', fontSize: 12 }}>
+        <td style={{padding: 8, fontSize: 12}}>
+          <Text code style={{color: '#6b7280', fontSize: 12}}>
+            {linkage.linkageId}
+          </Text>
+        </td>
+
+        <td style={{padding: '8px 12px', fontSize: 12}}>
           {vehicle ? (
-            <div>
-              <div style={{ fontWeight: 600, color: '#111827' }}>{vehicle.description}</div>
+            <Space orientation="vertical" size={4} style={{width: '100%'}}>
+              <Text strong style={{color: '#111827'}}>
+                {vehicle.description}
+              </Text>
               {vehicle.fullDescription && vehicle.fullDescription !== vehicle.description && (
-                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+                <Paragraph
+                  style={{
+                    fontSize: 10,
+                    color: '#6b7280',
+                    margin: 0,
+                  }}
+                >
                   {vehicle.fullDescription}
-                </div>
+                </Paragraph>
               )}
-            </div>
+            </Space>
           ) : (
-            <span style={{ color: '#9ca3af' }}>—</span>
+            <Text type="secondary">—</Text>
           )}
         </td>
 
-        <td style={{ padding: '8px 12px', fontSize: 12 }}>
+        <td style={{padding: 8, fontSize: 12}}>
           {model ? (
-            <div>
+            <Space orientation="vertical" size={4} style={{width: '100%'}}>
               {manufacturer && (
-                <div style={{ fontWeight: 600, color: '#111827', marginBottom: 4 }}>
+                <Text strong style={{color: '#111827'}}>
                   {manufacturer.description}
-                </div>
+                </Text>
               )}
-              <div style={{ color: '#374151' }}>{model.description}</div>
+              <Text style={{color: '#374151'}}>{model.description}</Text>
               {model.fullDescription && model.fullDescription !== model.description && (
-                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>{model.fullDescription}</div>
+                <Paragraph
+                  style={{
+                    fontSize: 10,
+                    color: '#6b7280',
+                    margin: 0,
+                  }}
+                >
+                  {model.fullDescription}
+                </Paragraph>
               )}
-            </div>
+            </Space>
           ) : (
-            <span style={{ color: '#9ca3af' }}>—</span>
+            <Text type="secondary">—</Text>
           )}
         </td>
 
-        <td style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
-          {vehicle?.constructionInterval || model?.constructionInterval || '—'}
+        <td style={{padding: 8, fontSize: 12}}>
+          <Text type="secondary">
+            {vehicle?.constructionInterval || model?.constructionInterval || '—'}
+          </Text>
         </td>
 
-        <td style={{ padding: '8px 12px', fontSize: 12 }}>
+        <td style={{padding: 8, fontSize: 12}}>
           {attributes.length > 0 ? (
             <Button
               type="link"
               onClick={() => setIsExpanded(!isExpanded)}
-              style={{ padding: 0, fontSize: 12 }}
-              icon={isExpanded ? <UpOutlined /> : <DownOutlined />}
+              style={{padding: 0, fontSize: 12}}
+              icon={isExpanded ? <UpOutlined/> : <DownOutlined/>}
             >
               Характеристики ({attributes.length})
             </Button>
           ) : (
-            <span style={{ color: '#9ca3af' }}>—</span>
+            <Text type="secondary">—</Text>
           )}
         </td>
       </tr>
 
       {isExpanded && attributes.length > 0 && (
-        <tr style={{ backgroundColor: '#f9fafb' }}>
-          <td colSpan={7} style={{ padding: '16px' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                <tr style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#f3f4f6' }}>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#4b5563' }}>
-                    Группа
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#4b5563' }}>
-                    Тип
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#4b5563' }}>
-                    Заголовок
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#4b5563' }}>
-                    Значение
-                  </th>
-                </tr>
-                </thead>
-                <tbody>
-                {attributes.map((attr, attrIdx) => (
-                  <tr
-                    key={attrIdx}
-                    style={{
-                      borderBottom: '1px solid #f3f4f6',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{ padding: '8px 12px', color: '#6b7280' }}>{attr.attributeGroup}</td>
-                    <td style={{ padding: '8px 12px', color: '#6b7280' }}>{attr.attributeType}</td>
-                    <td style={{ padding: '8px 12px', color: '#374151' }}>{attr.displayTitle}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: '#111827' }}>{attr.displayValue}</td>
-                  </tr>
-                ))}
-                </tbody>
-              </table>
-            </div>
+        <tr style={{backgroundColor: '#f9fafb'}}>
+          <td colSpan={7} style={{padding: 8}}>
+            <Card
+              size="small"
+              bordered={false}
+              style={{
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+                padding: 0,
+              }}
+              bodyStyle={{padding: 0}}
+            >
+              <Table
+                dataSource={attributes.map((attr, idx) => ({
+                  ...attr,
+                  key: idx,
+                }))}
+                columns={attributeColumns}
+                pagination={false}
+                size="small"
+                style={{fontSize: 12}}
+                onRow={() => ({
+                  onMouseEnter: (e) => {
+                    const tr = e.currentTarget.closest('tr')
+                    if (tr) tr.style.backgroundColor = '#ffffff'
+                  },
+                  onMouseLeave: (e) => {
+                    const tr = e.currentTarget.closest('tr')
+                    if (tr) tr.style.backgroundColor = 'transparent'
+                  },
+                })}
+              />
+            </Card>
           </td>
         </tr>
       )}
