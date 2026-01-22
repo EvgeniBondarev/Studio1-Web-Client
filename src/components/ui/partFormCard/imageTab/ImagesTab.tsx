@@ -4,15 +4,17 @@ import {PRImages} from './prImages/PRImages.tsx';
 import {useEffect, useState} from 'react';
 import type {ImageResponseItem} from '../../../../api/S3/clientTypes.ts';
 import {fetchImageUrlByProducerId} from '../../../../api/S3/interPartsClient.ts';
+import type {ImageDto} from '../../../../api/TecDoc/api/types.ts';
 
 type Props = {
     prIsLoading: boolean;
     prImages?: ProductImage[];
     code: string
     producerId: string
+    tecDocImg?:ImageDto[]
 };
 
-export const ImagesTab = ({prIsLoading, prImages = [], code, producerId}: Props) => {
+export const ImagesTab = ({prIsLoading, prImages = [], code, producerId, tecDocImg}: Props) => {
     const [s3Loading, setS3Loading] = useState<boolean>(true);
     const [s3Images, setS3Images] = useState<string[]>([]);
     useEffect(() => {
@@ -57,6 +59,8 @@ export const ImagesTab = ({prIsLoading, prImages = [], code, producerId}: Props)
 
     return <PRImages prImg={prImages}
                      s3Img={s3Images}
+                     supplierId={+producerId}
+                     tecDocImg={tecDocImg}
     />
 
 

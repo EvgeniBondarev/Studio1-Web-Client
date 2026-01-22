@@ -109,6 +109,7 @@ export function PublicPartInfoPage() {
             setActiveTab={setActiveTab}
             isPRLoading={isPRLoading}
             PRdata={PRdata}
+            tecDocImg={images}
             readOnly
           />
         </Col>

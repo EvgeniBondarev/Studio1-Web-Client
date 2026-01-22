@@ -10,6 +10,7 @@ import {usePartStrings} from '../../hooks/usePartStrings.tsx';
 import dayjs from 'dayjs';
 import {useEffect} from 'react';
 import type {EtPartForm} from '../../partsPanel/components/PartFormModal.tsx';
+import type {ImageDto} from '../../../api/TecDoc/api/types.ts';
 
 interface PartFormCardProps {
   initialValues?: Partial<EtPart>
@@ -20,6 +21,7 @@ interface PartFormCardProps {
   PRdata?: PRResponse
   isPRLoading: boolean
   readOnly?: boolean
+  tecDocImg?: ImageDto[]
 }
 
 export const PartFormCard = ({
@@ -30,6 +32,7 @@ export const PartFormCard = ({
                                selectedSession,
                                PRdata,
                                isPRLoading,
+                               tecDocImg,
                                readOnly
                              }: PartFormCardProps) => {
 
@@ -71,7 +74,9 @@ export const PartFormCard = ({
       content: <ImagesTab prImages={PRdata?.Images}
                           prIsLoading={isPRLoading}
                           code={initialValues?.Code ?? ''}
-                          producerId={initialValues?.ProducerId?.toString() ?? ''}/>
+                          producerId={initialValues?.ProducerId?.toString() ?? ''}
+                          tecDocImg={tecDocImg}
+      />
     },
     {
       key: 'pr_data',

@@ -6,6 +6,10 @@ import {fetchSessionById} from '../../../api/sessions.ts'
 import {fetchProductByBrandAndArticle} from '../../../api/partByBrandArticle.ts';
 import {usePartStrings} from '../../hooks/usePartStrings.tsx';
 import {PartFormCard} from '../../ui/partFormCard';
+import type {SupplierSearchResult} from '../../../api/TecDoc/api/types.ts';
+import type {ApiError} from '../../../api/TecDoc/api/client.ts';
+import {supplierSearchService} from '../../../api/TecDoc/api/services/supplier-search.service.ts';
+import {articleService} from '../../../api/TecDoc/api/services/article.service.ts';
 
 interface PartFormModalProps {
     open: boolean
@@ -43,6 +47,29 @@ export const PartFormModal = ({
         queryKey: ['prData', brand, initialValues?.Code],
         queryFn: () => fetchProductByBrandAndArticle(brand ?? '', initialValues?.Code ?? ''),
         enabled: Boolean(brand && initialValues?.Code),
+    })
+
+    const {data: supplierData} = useQuery<SupplierSearchResult, ApiError>({
+        queryKey: ['supplierSearch', brand],
+        queryFn: () => supplierSearchService.search({
+            query: brand || null,
+            page: 1,
+            pageSize: 20,
+            sortBy: 'relevance',
+            sortDescending: false,
+        }),
+        enabled: Boolean(brand),
+        staleTime: 5 * 60 * 1000, // 5 минут
+    })
+
+    const supplierId = supplierData?.items?.[0]?.supplierId
+
+    const {data: TecDocData} = useQuery({
+        queryKey: ['article', supplierId],
+        queryFn: () =>
+          articleService.getByExactMatch(supplierId!, String(initialValues?.Code)),
+        enabled: Boolean(supplierId && initialValues?.Code),
+        staleTime: 10 * 60 * 1000, // 10 минут
     })
 
     const { getText } = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
@@ -96,6 +123,7 @@ export const PartFormModal = ({
             isPRLoading={isLoading}
             PRdata={PRdata}
             selectedSession={selectedSession}
+            tecDocImg={TecDocData?.images}
             />
 
         </Modal>
