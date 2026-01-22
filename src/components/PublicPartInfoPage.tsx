@@ -20,7 +20,10 @@ const {Title} = Typography;
 export function PublicPartInfoPage() {
   const [params] = useSearchParams()
   const producerId = Number(params.get('producerId'))
-  const code = params.get('code') || ''
+  const code = (params.get('code') ?? '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
   const [form] = Form.useForm<EtPartForm>()
   const [activeTab, setActiveTab] = useState<string>('details')
 
