@@ -2,8 +2,6 @@ import {useEffect, useMemo, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
 import {Spin, Alert, Layout, Row, Col, Typography, Space} from 'antd'
 import {LeftCircleOutlined} from '@ant-design/icons'
-import {useQuery} from '@tanstack/react-query'
-import {articleService} from '../../../../api/TecDoc/api/services/article.service.ts';
 import '../../tecDoc.css'
 import {SearchInput} from '../../../ui/search-input.tsx';
 import {
@@ -18,6 +16,7 @@ import {
 import {ROUTE_GENERATE_TEC_DOC, ROUTE_TEC_DOC} from '../../constants/routes.ts';
 import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 import {useFilteredAttributes} from '../../useFilteredAttributes.ts';
+import {useArticleByExactMatch} from '../../useArticleByExactMatch.ts';
 
 const {Text} = Typography;
 const {Header, Content} = Layout
@@ -79,28 +78,22 @@ export const ArticleDetailPage = () => {
     return <div style={{padding: 24}}>Неверный путь</div>
   }
 
-  const {data, isLoading, error} = useQuery({
-    queryKey: ['article', supplierIdNum, articleNumber],
-    queryFn: () =>
-      articleService.getByExactMatch(supplierIdNum, articleNumber),
-    staleTime: 10 * 60 * 1000, // 10 минут
-  })
-
-  // Деструктуризация данных с дефолтными значениями для безопасного использования в useMemo
-  const article = data?.article
-  const supplier = data?.supplier
-  const images = data?.images || []
-  const eanCodes = data?.eanCodes || []
-  const information = data?.information || []
-  const accessories = data?.accessories || []
-  const newNumbers = data?.newNumbers || []
-
-
-  // Обертываем массивы в useMemo для стабильности зависимостей
-  const crosses = useMemo(() => data?.crosses ?? [], [data?.crosses])
-  const oeNumbers = useMemo(() => data?.oeNumbers ?? [], [data?.oeNumbers])
-  const attributes = useMemo(() => data?.attributes ?? [], [data?.attributes])
-  const linkages = useMemo(() => data?.linkages ?? [], [data?.linkages])
+  const {
+    article,
+    supplier,
+    images,
+    information,
+    eanCodes,
+    accessories,
+    newNumbers,
+    crosses,
+    oeNumbers,
+    attributes,
+    linkages,
+    hasData,
+    isLoading,
+    error,
+  } = useArticleByExactMatch(supplierIdNum, articleNumber)
 
   // ===== filters =====
 
@@ -196,7 +189,7 @@ export const ArticleDetailPage = () => {
     )
   }
 
-  if (!data || !article) return null
+  if (!hasData || !article) return null
 
   // ===== render =====
 
@@ -224,7 +217,7 @@ export const ArticleDetailPage = () => {
         }}
       >
         {/* Глобальный поиск */}
-        {data && (
+        {hasData && (
           <div style={{marginBottom: 24}}>
             <SearchInput
               value={globalSearch}

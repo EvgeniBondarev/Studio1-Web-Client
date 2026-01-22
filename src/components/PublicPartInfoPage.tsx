@@ -9,13 +9,11 @@ import {fetchProductByBrandAndArticle} from '../api/partByBrandArticle.ts';
 import {fetchProducerById} from '../api/producers.ts';
 import {ProducerDetailsCard} from './ui/producerDatailsCard';
 import {AdditionalInfo, Characteristics, ImgInfo, MainInfo} from './ui/tecDoc/articleDetails';
-import {articleService} from '../api/TecDoc/api/services/article.service.ts';
-import type {SupplierSearchResult} from '../api/TecDoc/api/types.ts';
 import type {ApiError} from '../api/TecDoc/api/client.ts';
-import {supplierSearchService} from '../api/TecDoc/api/services/supplier-search.service.ts';
 import {useFilteredAttributes} from './tecDocPage/useFilteredAttributes.ts';
 import {type SupplierDetailResponse, supplierService} from '../api/TecDoc/api/services/supplier.service.ts';
 import {SupplierDetailsCard} from './ui/tecDoc/supplierDetails/SupplierDetailsCard.tsx';
+import {useArticleByBrandAndCode} from './tecDocPage/useArticleByBrandAndCode.ts';
 
 const {Title} = Typography;
 
@@ -50,28 +48,15 @@ export function PublicPartInfoPage() {
     enabled: Boolean(brand && part?.Code),
   })
 
-  const {data: supplierData, isLoading: isSupplierLoading} = useQuery<SupplierSearchResult, ApiError>({
-    queryKey: ['supplierSearch', brand],
-    queryFn: () => supplierSearchService.search({
-      query: brand || null,
-      page: 1,
-      pageSize: 20,
-      sortBy: 'relevance',
-      sortDescending: false,
-    }),
-    enabled: Boolean(brand),
-    staleTime: 5 * 60 * 1000, // 5 минут
-  })
-
-  const supplierId = supplierData?.items?.[0]?.supplierId
-
-  const {data: TecDocData, isLoading: TecDocLoading} = useQuery({
-    queryKey: ['article', supplierId, code],
-    queryFn: () =>
-      articleService.getByExactMatch(supplierId!, code),
-    enabled: Boolean(supplierId && code),
-    staleTime: 10 * 60 * 1000, // 10 минут
-  })
+  const {
+    supplierId,
+    article,
+    supplier,
+    attributes,
+    images,
+    information,
+    isLoading: TecDocLoading,
+  } = useArticleByBrandAndCode(brand, code)
 
   const {data: supplierDetailData, isLoading: supplierDetailLoading,} = useQuery<SupplierDetailResponse, ApiError>({
     queryKey: ['supplier', supplierId],
@@ -80,20 +65,14 @@ export function PublicPartInfoPage() {
     staleTime: 30 * 60 * 1000, // 30 минут
   })
 
-  const article = TecDocData?.article
-  const supplier = TecDocData?.supplier
-  const images = TecDocData?.images || []
-  const information = TecDocData?.information || []
-  const attributes = TecDocData?.attributes ?? [];
-
   const {
     filteredAttributes,
     search: attributesSearch,
     setSearch: setAttributesSearch
-  } =
-    useFilteredAttributes(attributes);
+  } = useFilteredAttributes(attributes);
 
-  if (isLoading || TecDocLoading || isSupplierLoading || supplierDetailLoading) return <Spin/>
+
+  if (isLoading || TecDocLoading || supplierDetailLoading) return <Spin/>
   if (!part) return <Empty description="Деталь не найдена"/>
   return (
     <div style={{maxWidth: 1200, padding: 30, margin: '0 auto'}}>

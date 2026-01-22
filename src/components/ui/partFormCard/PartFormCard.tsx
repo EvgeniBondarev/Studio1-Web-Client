@@ -10,7 +10,9 @@ import {usePartStrings} from '../../hooks/usePartStrings.tsx';
 import dayjs from 'dayjs';
 import {useEffect} from 'react';
 import type {EtPartForm} from '../../partsPanel/components/PartFormModal.tsx';
-import type {ImageDto} from '../../../api/TecDoc/api/types.ts';
+import type {ImageDto, SupplierInfoDto, ArticleInfoDto, AttributeDto} from '../../../api/TecDoc/api/types.ts';
+import {Characteristics, MainInfo} from '../tecDoc/articleDetails';
+import {useFilteredAttributes} from '../../tecDocPage/useFilteredAttributes.ts';
 
 interface PartFormCardProps {
   initialValues?: Partial<EtPart>
@@ -22,6 +24,9 @@ interface PartFormCardProps {
   isPRLoading: boolean
   readOnly?: boolean
   tecDocImg?: ImageDto[]
+  article?: ArticleInfoDto
+  supplier?: SupplierInfoDto
+  attributes?: AttributeDto[]
 }
 
 export const PartFormCard = ({
@@ -33,10 +38,20 @@ export const PartFormCard = ({
                                PRdata,
                                isPRLoading,
                                tecDocImg,
+                               supplier,
+                               article,
+                               attributes,
                                readOnly
                              }: PartFormCardProps) => {
 
-  const { getText } = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
+  const {getText} = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
+
+  const safeAttributes = attributes ?? [];
+
+  const hasTecDocData =
+    !!article ||
+    !!supplier ||
+    (safeAttributes?.length ?? 0) > 0;
 
   useEffect(() => {
     if (!initialValues) {
@@ -61,6 +76,13 @@ export const PartFormCard = ({
   const fileImportValue = selectedSession ?? '—'
   const importDateValue = selectedSession ? formatSessionDate(selectedSession.Start) : '—'
 
+  const {
+    filteredAttributes,
+    search: attributesSearch,
+    setSearch: setAttributesSearch
+  } =
+    useFilteredAttributes(safeAttributes);
+
   const tabsConfig = [
     {
       key: 'details',
@@ -84,6 +106,30 @@ export const PartFormCard = ({
       content: <DataTab attributes={PRdata?.Attributes}
                         categories={PRdata?.VendorCategories}/>
     },
+    ...(hasTecDocData
+      ? [
+        {
+          key: 'tecDoc_data',
+          label: 'TecDoc',
+          content: (
+            <>
+              {article && supplier && (
+                <MainInfo article={article} supplier={supplier} />
+              )}
+
+              {(attributes?.length ?? 0) > 0 && (
+                <Characteristics
+                  filteredAttributes={filteredAttributes}
+                  attributesSearch={attributesSearch}
+                  attributesLength={attributes!.length}
+                  setAttributesSearch={setAttributesSearch}
+                />
+              )}
+            </>
+          ),
+        },
+      ]
+      : []),
   ]
 
   return (
