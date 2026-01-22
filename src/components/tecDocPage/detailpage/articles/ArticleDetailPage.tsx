@@ -17,6 +17,7 @@ import {
 } from '../../../ui/tecDoc/articleDetails';
 import {ROUTE_GENERATE_TEC_DOC, ROUTE_TEC_DOC} from '../../constants/routes.ts';
 import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
+import {useFilteredAttributes} from '../../useFilteredAttributes.ts';
 
 const {Text} = Typography;
 const {Header, Content} = Layout
@@ -72,7 +73,6 @@ export const ArticleDetailPage = () => {
   const [globalSearch, setGlobalSearch] = useState('')
   const [crossesSearch, setCrossesSearch] = useState('')
   const [oeNumbersSearch, setOeNumbersSearch] = useState('')
-  const [attributesSearch, setAttributesSearch] = useState('')
   const [linkagesSearch, setLinkagesSearch] = useState('')
 
   if (!supplierId || !articleNumber) {
@@ -127,19 +127,9 @@ export const ArticleDetailPage = () => {
     })
   }, [oeNumbers, oeNumbersSearch, globalSearch])
 
-  const filteredAttributes = useMemo(() => {
-    const searchQuery = globalSearch || attributesSearch
-    if (!searchQuery.trim()) return attributes
-    const query = searchQuery.toLowerCase()
-    return attributes.filter((attr) => {
-      return (
-        attr.description.toLowerCase().includes(query) ||
-        attr.displayTitle.toLowerCase().includes(query) ||
-        attr.displayValue.toLowerCase().includes(query) ||
-        attr.id.toString().includes(query)
-      )
-    })
-  }, [attributes, attributesSearch, globalSearch])
+
+  const { filteredAttributes, search: attributesSearch, setSearch: setAttributesSearch } =
+    useFilteredAttributes(attributes, '', globalSearch);
 
   const filteredLinkages = useMemo(() => {
     const searchQuery = globalSearch || linkagesSearch

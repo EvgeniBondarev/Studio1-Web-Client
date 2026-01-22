@@ -5,7 +5,7 @@ import {PaginatedTable} from '../../paginated-table.tsx';
 type Props = {
   filteredAttributes: AttributeDto[]
   attributesSearch: string,
-  globalSearch: string
+  globalSearch?: string
   attributesLength: number
   setAttributesSearch: (value: string) => void
 }
