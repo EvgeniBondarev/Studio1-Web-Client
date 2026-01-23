@@ -1,6 +1,6 @@
 import * as React from 'react'
 import {Space, Typography} from 'antd'
-import {LinkOutlined, QuestionCircleOutlined, InfoCircleOutlined, EditOutlined, DeleteOutlined} from '@ant-design/icons'
+import {LinkOutlined, QuestionCircleOutlined, EditOutlined, DeleteOutlined} from '@ant-design/icons'
 import {ContextActionsMenu} from '../../ContextActionsMenu.tsx'
 import type {EtProducer} from '../../../api/types.ts';
 
@@ -15,7 +15,6 @@ interface ProducerRowProps {
         isLoading: boolean
     }
     onRowClick: (producer: EtProducer, event: React.MouseEvent<HTMLDivElement>) => void
-    onView: (producer: EtProducer) => void
     onEdit: (producer: EtProducer) => void
     onDelete: (producer: EtProducer) => void
 }
@@ -46,7 +45,6 @@ export const ProducerRow = React.memo(({
                                 prefix,
                                 partsCountInfo,
                                 onRowClick,
-                                onView,
                                 onEdit,
                                 onDelete,
                             }: ProducerRowProps) => {
@@ -54,16 +52,6 @@ export const ProducerRow = React.memo(({
     const isNonOriginal = producer.RealId != null && producer.RealId !== producer.Id
 
     const actions = [
-        {
-            key: 'view',
-            label: (
-                <Space size={6}>
-                    <InfoCircleOutlined/>
-                    Просмотр
-                </Space>
-            ),
-            onClick: ()=>onView(producer),
-        },
         {
             key: 'edit',
             label: (

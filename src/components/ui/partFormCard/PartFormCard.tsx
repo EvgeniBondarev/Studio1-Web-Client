@@ -1,4 +1,4 @@
-import {Col, Form, type FormInstance, Input, Row, Tabs} from 'antd'
+import {Col, Empty, Form, type FormInstance, Input, Row, Tabs} from 'antd'
 
 import {DataTab} from './dataTab/DataTab'
 import {ImagesTab} from './imageTab/ImagesTab'
@@ -46,9 +46,14 @@ export const PartFormCard = ({
 
   const {getText} = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
 
+  const hasTecDocProps =
+    article !== undefined ||
+    supplier !== undefined ||
+    attributes !== undefined;
+
   const safeAttributes = attributes ?? [];
 
-  const hasTecDocData =
+  const hasTecDocContent =
     !!article ||
     !!supplier ||
     (safeAttributes?.length ?? 0) > 0;
@@ -106,30 +111,37 @@ export const PartFormCard = ({
       content: <DataTab attributes={PRdata?.Attributes}
                         categories={PRdata?.VendorCategories}/>
     },
-    ...(hasTecDocData
+    ...(hasTecDocProps
       ? [
         {
           key: 'tecDoc_data',
           label: 'TecDoc',
           content: (
             <>
-              {article && supplier && (
-                <MainInfo article={article} supplier={supplier} />
-              )}
+              {hasTecDocContent ? (
+                <>
+                  {article && supplier && (
+                    <MainInfo article={article} supplier={supplier} />
+                  )}
 
-              {(attributes?.length ?? 0) > 0 && (
-                <Characteristics
-                  filteredAttributes={filteredAttributes}
-                  attributesSearch={attributesSearch}
-                  attributesLength={attributes!.length}
-                  setAttributesSearch={setAttributesSearch}
-                />
+                  {safeAttributes.length > 0 && (
+                    <Characteristics
+                      filteredAttributes={filteredAttributes}
+                      attributesSearch={attributesSearch}
+                      attributesLength={attributes?.length ?? 0}
+                      setAttributesSearch={setAttributesSearch}
+                    />
+                  )}
+                </>
+              ) : (
+                <Empty description="Данные TecDoc не найдены" />
               )}
             </>
           ),
         },
       ]
-      : []),
+      : [])
+    ,
   ]
 
   return (

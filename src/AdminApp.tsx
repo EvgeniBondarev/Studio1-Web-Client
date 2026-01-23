@@ -14,7 +14,6 @@ import type {MenuProps} from 'antd'
 import type {EtPart, EtProducer, CtUser} from './api/types.ts'
 import {ProducerPanel} from './components/producerPanel'
 import {PartsPanel} from './components/partsPanel'
-import {PartDetailsModal} from './components/partDetailsModal'
 import {LoginPage} from './components/LoginPage.tsx'
 import {UserProfileModal} from './components/userProfileModal'
 import {fetchProducerById} from './api/producers.ts'
@@ -23,7 +22,6 @@ import type {SearchType} from './config/resources.ts';
 import {CrossCodePage} from './components/crossCodePage';
 import {TecDocRoutes} from './components/tecDocPage';
 import {useLocation, useNavigate} from 'react-router-dom';
-
 
 const {Sider, Content} = Layout
 
@@ -468,8 +466,6 @@ const AdminApp = () => {
           </Layout>
         </Layout>
 
-        <PartDetailsModal producer={selectedProducer} part={selectedPart}
-                          onClose={() => setSelectedPart(null)}/>
         <UserProfileModal
           user={currentUser}
           open={profileModalOpen}
