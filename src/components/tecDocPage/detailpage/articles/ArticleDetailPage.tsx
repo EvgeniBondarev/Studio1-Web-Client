@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
-import {Spin, Alert, Layout, Row, Col, Typography, Space} from 'antd'
-import {LeftCircleOutlined} from '@ant-design/icons'
+import {Spin, Alert, Layout, Row, Col, Typography, Space, Flex} from 'antd'
+import {ArrowLeftOutlined, LeftCircleOutlined} from '@ant-design/icons'
 import '../../tecDoc.css'
 import {SearchInput} from '../../../ui/search-input.tsx';
 import {
@@ -17,6 +17,7 @@ import {ROUTE_GENERATE_TEC_DOC, ROUTE_TEC_DOC} from '../../constants/routes.ts';
 import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 import {useFilteredAttributes} from '../../useFilteredAttributes.ts';
 import {useArticleByExactMatch} from '../../useArticleByExactMatch.ts';
+import '../../tecDoc.css'
 
 const {Text} = Typography;
 const {Header, Content} = Layout
@@ -195,25 +196,34 @@ export const ArticleDetailPage = () => {
 
   return (
     <Layout style={{minHeight: '100vh', background: '#f5f5f5', overflow: 'auto',}}>
+
       <Header
         style={{
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: '#ffffff',
+          borderBottom: `1px solid #e5e7eb`,
+          height: 'auto',
         }}
       >
-        <Link
-          to={searchUrl}
-          className={'header-link'}
-        >
-          ← Назад к поиску
-        </Link>
+        <div style={{
+          maxWidth: 1400,
+          margin: '0 auto',
+        }}>
+          <Flex>
+            <Link to={searchUrl} className="header-link">
+              <Space size={6}>
+                <ArrowLeftOutlined/>
+                <span>Назад к поиску</span>
+              </Space>
+            </Link>
+          </Flex>
+          </div>
       </Header>
 
       <Content
         style={{
           maxWidth: 1400,
           margin: '0 auto',
-          padding: '24px 16px',
+          padding: 24,
         }}
       >
         {/* Глобальный поиск */}

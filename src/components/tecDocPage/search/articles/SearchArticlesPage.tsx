@@ -222,14 +222,16 @@ export  const SearchArticlesPage=()=> {
             <ArticleList
               articles={data.items}
               isLoading={isLoading}
-              viewMode={'rows'}
+              viewMode={viewMode}
             />
 
-            <Pagination
-              currentPage={data.page}
-              totalPages={data.total}
-              onPageChange={handlePageChange}
-            />
+            <Flex justify="center">
+              <Pagination
+                currentPage={data.page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </Flex>
           </>
         )}
 

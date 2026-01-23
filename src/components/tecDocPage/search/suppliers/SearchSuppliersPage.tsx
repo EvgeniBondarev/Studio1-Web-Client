@@ -112,11 +112,6 @@ export const SearchSuppliersPage=()=> {
         <Card
           title="Поиск поставщиков"
           style={cardStyle}
-          headStyle={{
-            borderBottom: '1px solid #f0f0f0',
-            fontWeight: 600,
-            fontSize: '16px'
-          }}
         >
 
           <SupplierSearchForm
@@ -176,7 +171,7 @@ export const SearchSuppliersPage=()=> {
                     поставщиков
                   </Text>
                   {data.took && (
-                    <Text type="secondary" style={{ fontSize: '14px' }}>
+                    <Text type="secondary" style={{fontSize: '14px'}}>
                       (за {data.took} мс)
                     </Text>
                   )}
@@ -193,16 +188,18 @@ export const SearchSuppliersPage=()=> {
               </Col>
             </Row>
 
-              <SupplierList
-                suppliers={data.items}
-                viewMode={viewMode}
-              />
+            <SupplierList
+              suppliers={data.items}
+              viewMode={viewMode}
+            />
 
-                <Pagination
-                  currentPage={data.page}
-                  totalPages={data.totalPages}
-                  onPageChange={handlePageChange}
-                />
+            <Flex justify="center">
+              <Pagination
+                currentPage={data.page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </Flex>
           </>
         )}
 

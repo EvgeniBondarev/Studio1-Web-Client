@@ -112,14 +112,12 @@ export const SupplierDetailPage = () => {
         style={{
           backgroundColor: '#ffffff',
           borderBottom: `1px solid #e5e7eb`,
-          padding: 0,
           height: 'auto',
         }}
       >
         <div style={{
-          maxWidth: 1200,
+          maxWidth: 1400,
           margin: '0 auto',
-          padding: `16px 24px`,
         }}>
           <Flex align="center">
             <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS} className="header-link">
