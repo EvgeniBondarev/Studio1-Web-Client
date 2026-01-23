@@ -1,0 +1,1 @@
+export { ArticleDetailPage } from './ArticleDetailPage.tsx'

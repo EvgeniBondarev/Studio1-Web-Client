@@ -12,7 +12,7 @@ export interface ODataQueryOptions {
   skip?: number
 }
 
-const baseURL = "http://studio-api.interparts.ru/odata" //'http://studio-api.interparts.ru/odata' // 'http://localhost:7091/odata'
+const baseURL = "https://studio-api.interparts.ru/odata" //'http://studio-api.interparts.ru/odata' // 'http://localhost:7091/odata'
 const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({

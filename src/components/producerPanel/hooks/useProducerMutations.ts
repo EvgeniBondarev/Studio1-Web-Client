@@ -1,7 +1,7 @@
-import { Modal, message } from 'antd'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {Modal} from 'antd'
 import type {EtProducer} from '../../../api/types.ts';
 import {createProducer, deleteProducer, updateProducer} from '../../../api/producers.ts';
+import {useEntityMutation} from '../../hooks/useEntityMutation.ts';
 
 interface Props {
   onAfterSave?: () => void
@@ -12,35 +12,33 @@ export const useProducerMutations = ({
                                        onAfterSave,
                                        onDeleted,
                                      }:Props = {}) => {
-  const queryClient = useQueryClient()
 
-  const createMutation = useMutation({
-    mutationFn: createProducer,
-    onSuccess: () => {
-      message.success('Производитель создан')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      onAfterSave?.()
-    },
-  })
+  const createMutation = useEntityMutation<Partial<EtProducer>, EtProducer>(
+    createProducer,
+    {
+      successMessage: 'Производитель создан',
+      invalidate: [['producers']],
+      onSuccessExtra: onAfterSave,
+    }
+  )
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<EtProducer> }) =>
-      updateProducer(id, payload),
-    onSuccess: () => {
-      message.success('Изменения сохранены')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      onAfterSave?.()
-    },
-  })
+  const updateMutation = useEntityMutation<{ id: number; payload: Partial<EtProducer> }, EtProducer>(
+    ({ id, payload }) => updateProducer(id, payload),
+    {
+      successMessage: 'Изменения сохранены',
+      invalidate: [['producers']],
+      onSuccessExtra: onAfterSave,
+    }
+  )
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteProducer(id),
-    onSuccess: (_, id) => {
-      message.success('Производитель удалён')
-      queryClient.invalidateQueries({ queryKey: ['producers'] })
-      onDeleted?.(id)
-    },
-  })
+  const deleteMutation = useEntityMutation<number, void>(
+    (id) => deleteProducer(id),
+    {
+      successMessage: 'Производитель удалён',
+      invalidate: [['producers']],
+      onSuccessExtra: (id) => onDeleted?.(id),
+    }
+  )
 
   const confirmDelete = (producer: EtProducer) => {
     Modal.confirm({
