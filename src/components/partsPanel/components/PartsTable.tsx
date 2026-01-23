@@ -68,7 +68,14 @@ export const PartsTable = ({
                         const actions = partsActionsMap.get(partId)
 
                         return {
-                            onClick: () => onSelectPart(record),
+                            onClick: () =>{
+                              onSelectPart(record)
+                              const editAction = partsActionsMap
+                                .get(record.Id)
+                                ?.find(action => action.key === 'edit')
+
+                              editAction?.onClick()
+                            } ,
                             onContextMenu: (e: MouseEvent<HTMLTableRowElement>) => {
                                 if (actions && actions.length > 0) {
                                     e.preventDefault()

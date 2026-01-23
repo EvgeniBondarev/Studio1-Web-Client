@@ -8,19 +8,20 @@ import {
   SettingOutlined,
   MoonOutlined,
   SunOutlined,
-  DollarOutlined, ApartmentOutlined
+  DollarOutlined, ApartmentOutlined, FileSearchOutlined
 } from '@ant-design/icons'
 import type {MenuProps} from 'antd'
 import type {EtPart, EtProducer, CtUser} from './api/types.ts'
 import {ProducerPanel} from './components/producerPanel'
 import {PartsPanel} from './components/partsPanel'
-import {PartDetailsModal} from './components/partDetailsModal'
 import {LoginPage} from './components/LoginPage.tsx'
 import {UserProfileModal} from './components/userProfileModal'
 import {fetchProducerById} from './api/producers.ts'
 import {fetchPartsPage, fetchPartsPageWithoutProducer} from './api/parts.ts'
 import type {SearchType} from './config/resources.ts';
 import {CrossCodePage} from './components/crossCodePage';
+import {TecDocRoutes} from './components/tecDocPage';
+import {useLocation, useNavigate} from 'react-router-dom';
 
 const {Sider, Content} = Layout
 
@@ -68,6 +69,15 @@ const AdminApp = () => {
   const [initialPartsSearch, setInitialPartsSearch] = useState<string | undefined>(undefined)
   const [initialPartsSearchType, setInitialPartsSearchType] = useState<'by_producer' | 'without_producer' | undefined>(undefined)
   const [partsProducerIds, setPartsProducerIds] = useState<number[]>([])
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/tecdoc')) {
+      setActiveTab('tecdoc');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -270,6 +280,11 @@ const AdminApp = () => {
       icon: <ApartmentOutlined/>,
     },
     {
+      key: 'tecdoc',
+      label: 'Каталог TecDoc',
+      icon: <FileSearchOutlined />,
+    },
+    {
       key: 'test1',
       label: 'Тест 1',
       icon: <ExperimentOutlined/>,
@@ -368,7 +383,12 @@ const AdminApp = () => {
                 mode="inline"
                 selectedKeys={[activeTab]}
                 items={navItems}
-                onClick={({key}) => setActiveTab(key)}
+                onClick={({key}) => {
+                  setActiveTab(key)
+                  if (key !== 'tecdoc' && location.pathname.startsWith('/tecdoc')) {
+                    navigate('/')
+                  }
+                }}
                 style={{borderInlineEnd: 'none'}}
               />
               <div className="navigation-sider__footer">
@@ -428,6 +448,8 @@ const AdminApp = () => {
               </Layout>
             ) : activeTab === 'crossCode' ? (
              <CrossCodePage/>
+            ) : activeTab === 'tecdoc' ? (
+                  <TecDocRoutes/>
             ) : activeTab === 'test1' ? (
               <Layout className="full-height">
                 <Content style={{padding: 24}} className="full-height content-scroll">
@@ -444,8 +466,6 @@ const AdminApp = () => {
           </Layout>
         </Layout>
 
-        <PartDetailsModal producer={selectedProducer} part={selectedPart}
-                          onClose={() => setSelectedPart(null)}/>
         <UserProfileModal
           user={currentUser}
           open={profileModalOpen}

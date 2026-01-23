@@ -1,7 +1,6 @@
-import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react'
+import {useEffect, useMemo, useRef, type ChangeEvent} from 'react'
 import {Empty, Flex} from 'antd'
 import type {EtPart, EtProducer} from '../../api/types.ts';
-import {PartDetailsModal} from '../partDetailsModal';
 import {PartsHeader} from './components/PartsHeader.tsx';
 import {PartsSearch} from './components/PartsSearch.tsx';
 import {usePartsActionsMap} from './hooks/usePartsActionsMap.tsx';
@@ -57,7 +56,6 @@ export const PartsPanel = ({
         onSearchTypeChange,
     })
 
-    const [previewPart, setPreviewPart] = useState<EtPart | null>(null)
     const tableContainerRef = useRef<HTMLDivElement>(null)
 
     const { processSearchTerm } = useSearchNormalization()
@@ -117,10 +115,7 @@ export const PartsPanel = ({
     // Создаем маппинг actions для каждой детали
     const partsActionsMap = usePartsActionsMap({
         filteredParts,
-        onView: (part) => setPreviewPart(part),
-        onEdit: (part) => {
-            openModal(part)
-        },
+        onEdit: (part) => openModal(part),
         onDelete: (part) => confirmDelete(part),
     })
 
@@ -223,8 +218,6 @@ export const PartsPanel = ({
                     initialLoading={initialLoading}
                 />
             )}
-
-            <PartDetailsModal producer={producer} part={previewPart} onClose={() => setPreviewPart(null)}/>
 
             <PartFormModal
                 open={isModalOpen}

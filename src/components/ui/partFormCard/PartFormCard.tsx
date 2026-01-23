@@ -1,4 +1,4 @@
-import {Col, Form, type FormInstance, Input, Row, Tabs} from 'antd'
+import {Col, Empty, Form, type FormInstance, Input, Row, Tabs} from 'antd'
 
 import {DataTab} from './dataTab/DataTab'
 import {ImagesTab} from './imageTab/ImagesTab'
@@ -10,6 +10,9 @@ import {usePartStrings} from '../../hooks/usePartStrings.tsx';
 import dayjs from 'dayjs';
 import {useEffect} from 'react';
 import type {EtPartForm} from '../../partsPanel/components/PartFormModal.tsx';
+import type {ImageDto, SupplierInfoDto, ArticleInfoDto, AttributeDto} from '../../../api/TecDoc/api/types.ts';
+import {Characteristics, MainInfo} from '../tecDoc/articleDetails';
+import {useFilteredAttributes} from '../../tecDocPage/useFilteredAttributes.ts';
 
 interface PartFormCardProps {
   initialValues?: Partial<EtPart>
@@ -20,6 +23,10 @@ interface PartFormCardProps {
   PRdata?: PRResponse
   isPRLoading: boolean
   readOnly?: boolean
+  tecDocImg?: ImageDto[]
+  article?: ArticleInfoDto
+  supplier?: SupplierInfoDto
+  attributes?: AttributeDto[]
 }
 
 export const PartFormCard = ({
@@ -30,10 +37,26 @@ export const PartFormCard = ({
                                selectedSession,
                                PRdata,
                                isPRLoading,
+                               tecDocImg,
+                               supplier,
+                               article,
+                               attributes,
                                readOnly
                              }: PartFormCardProps) => {
 
-  const { getText } = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
+  const {getText} = usePartStrings(initialValues?.ProducerId, [initialValues?.Name, initialValues?.Description])
+
+  const hasTecDocProps =
+    article !== undefined ||
+    supplier !== undefined ||
+    attributes !== undefined;
+
+  const safeAttributes = attributes ?? [];
+
+  const hasTecDocContent =
+    !!article ||
+    !!supplier ||
+    (safeAttributes?.length ?? 0) > 0;
 
   useEffect(() => {
     if (!initialValues) {
@@ -58,6 +81,13 @@ export const PartFormCard = ({
   const fileImportValue = selectedSession ?? '—'
   const importDateValue = selectedSession ? formatSessionDate(selectedSession.Start) : '—'
 
+  const {
+    filteredAttributes,
+    search: attributesSearch,
+    setSearch: setAttributesSearch
+  } =
+    useFilteredAttributes(safeAttributes);
+
   const tabsConfig = [
     {
       key: 'details',
@@ -71,7 +101,9 @@ export const PartFormCard = ({
       content: <ImagesTab prImages={PRdata?.Images}
                           prIsLoading={isPRLoading}
                           code={initialValues?.Code ?? ''}
-                          producerId={initialValues?.ProducerId?.toString() ?? ''}/>
+                          producerId={initialValues?.ProducerId?.toString() ?? ''}
+                          tecDocImg={tecDocImg}
+      />
     },
     {
       key: 'pr_data',
@@ -79,6 +111,37 @@ export const PartFormCard = ({
       content: <DataTab attributes={PRdata?.Attributes}
                         categories={PRdata?.VendorCategories}/>
     },
+    ...(hasTecDocProps
+      ? [
+        {
+          key: 'tecDoc_data',
+          label: 'TecDoc',
+          content: (
+            <>
+              {hasTecDocContent ? (
+                <>
+                  {article && supplier && (
+                    <MainInfo article={article} supplier={supplier} />
+                  )}
+
+                  {safeAttributes.length > 0 && (
+                    <Characteristics
+                      filteredAttributes={filteredAttributes}
+                      attributesSearch={attributesSearch}
+                      attributesLength={attributes?.length ?? 0}
+                      setAttributesSearch={setAttributesSearch}
+                    />
+                  )}
+                </>
+              ) : (
+                <Empty description="Данные TecDoc не найдены" />
+              )}
+            </>
+          ),
+        },
+      ]
+      : [])
+    ,
   ]
 
   return (

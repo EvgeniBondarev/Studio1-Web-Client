@@ -1,10 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {Button, Empty, Flex, message, Space, Spin, Typography} from 'antd'
+import {Button, Empty, Flex, Space, Spin, Typography} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import type {EtProducer} from '../../api/types.ts';
-import {fetchProducerById,} from '../../api/producers.ts';
 import {ProducerRow} from './components/ProducerRow.tsx';
-import {ProducerDetailsModal} from '../producerDetailsModal';
 import {EntityFormModal} from '../EntityFormModal.tsx';
 import {producerFields, type SearchType} from '../../config/resources.ts';
 import {LinkToOriginalModal} from './components/LinkToOriginalModal.tsx';
@@ -57,7 +55,6 @@ export const ProducerPanel = ({
   const prevExternalSearchRef = useRef<string | undefined>(externalSearch)
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingProducer, setEditingProducer] = useState<EtProducer | null>(null)
-  const [previewProducer, setPreviewProducer] = useState<EtProducer | null>(null)
   const [sortField, setSortField] = useState<SortField | null>(null)
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [linkModalOpen, setLinkModalOpen] = useState(false)
@@ -168,17 +165,6 @@ export const ProducerPanel = ({
     },
   })
 
-  const handleSelectProducer = useCallback(async (producerId: number) => {
-    try {
-      const producer = await fetchProducerById(producerId)
-      onSelect(producer)
-      setPreviewProducer(null)
-    } catch (error) {
-      console.error('Ошибка при загрузке основного производителя:', error)
-      message.error('Не удалось загрузить основного производителя')
-    }
-  }, [onSelect])
-
   const handleSubmit = (values: Partial<EtProducer>) => {
     if (editingProducer) {
       updateProducer({id: editingProducer.Id, payload: values})
@@ -186,8 +172,6 @@ export const ProducerPanel = ({
       createProducer(values)
     }
   }
-
-  const handleView = useCallback((producer: EtProducer) => {setPreviewProducer(producer)}, [])
 
   const handleEdit = useCallback((producer: EtProducer) => {
     setEditingProducer(producer)
@@ -256,7 +240,6 @@ export const ProducerPanel = ({
                 isSelected={selectedProducerIds.has(producer.Id)}
                 isActive={isActive}
                 onRowClick={handleProducerClick}
-                onView={handleView}
                 onEdit={handleEdit}
                 prefix={prefix}
                 prefixFrequency={prefixFrequency}
@@ -308,12 +291,6 @@ export const ProducerPanel = ({
       />
 
       <div className="panel-body">{renderList()}</div>
-
-      <ProducerDetailsModal
-        producer={previewProducer}
-        onClose={() => setPreviewProducer(null)}
-        onSelectProducer={handleSelectProducer}
-      />
 
       <EntityFormModal<EtProducer>
         title={editingProducer ? 'Редактирование производителя' : 'Новый производитель'}
