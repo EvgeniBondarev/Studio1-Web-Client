@@ -102,12 +102,8 @@ export const SearchSuppliersPage=()=> {
         </Flex>
       </Header>
 
-      <Content style={{
-        width:'900px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '24px 16px'
-      }}>
+      <Content style={{padding: 24,}}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
         {/* Search Form */}
         <Card
           title="Поиск поставщиков"
@@ -218,6 +214,7 @@ export const SearchSuppliersPage=()=> {
             </div>
           </Card>
         )}
+        </div>
       </Content>
     </Layout>
   )
