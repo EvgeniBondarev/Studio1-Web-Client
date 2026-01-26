@@ -7,7 +7,6 @@ import {RightCol} from './formColumns/RightCol'
 import {DetailsTab} from './detailsTab/DetailsTab'
 import type {CtSession, EtPart, PRResponse} from '../../../api/types.ts';
 import {usePartStrings} from '../../hooks/usePartStrings.tsx';
-import dayjs from 'dayjs';
 import {useEffect} from 'react';
 import type {EtPartForm} from '../../partsPanel/components/PartFormModal.tsx';
 import type {ImageDto, SupplierInfoDto, ArticleInfoDto, AttributeDto} from '../../../api/TecDoc/api/types.ts';
@@ -71,16 +70,6 @@ export const PartFormCard = ({
     })
   }, [initialValues, getText, form])
 
-
-  const formatSessionDate = (value?: string) => {
-    if (!value) return '—'
-    const parsed = dayjs(value)
-    return parsed.isValid() ? parsed.format('DD.MM.YYYY HH:mm') : value
-  }
-
-  const fileImportValue = selectedSession ?? '—'
-  const importDateValue = selectedSession ? formatSessionDate(selectedSession.Start) : '—'
-
   const {
     filteredAttributes,
     search: attributesSearch,
@@ -92,8 +81,7 @@ export const PartFormCard = ({
     {
       key: 'details',
       label: 'Деталь',
-      content: <DetailsTab fileImportValue={fileImportValue}
-                           importDateValue={importDateValue}/>
+      content: <DetailsTab selectedSession={selectedSession}/>
     },
     {
       key: 'images',
