@@ -2,7 +2,6 @@ import {Link, useParams} from 'react-router-dom'
 import {useQuery} from '@tanstack/react-query'
 import {Card, Spin, Alert, Layout, Typography, Flex, Space} from 'antd'
 import {
-  ArrowLeftOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import {type SupplierDetailResponse, supplierService} from '../../../../api/TecDoc/api/services/supplier.service.ts'
@@ -10,8 +9,10 @@ import type {ApiError} from '../../../../api/TecDoc/api/client.ts'
 import '../../tecDoc.css'
 import {SupplierDetailsCard} from '../../../ui/tecDoc/supplierDetails/SupplierDetailsCard.tsx'
 import {ROUTE_TEC_DOC} from '../../constants/routes.ts';
+import {PageHeader} from '../../../ui/tecDoc/PageHeader.tsx';
+import {PageLayout} from '../../../ui/tecDoc/PageLayout.tsx';
 
-const {Header, Content} = Layout
+const {Content} = Layout
 const {Text} = Typography
 
 export const SupplierDetailPage = () => {
@@ -107,37 +108,22 @@ export const SupplierDetailPage = () => {
   }
 
   return (
-    <Layout style={{minHeight: '100vh', backgroundColor: '#f9fafb'}}>
-      <Header
-        style={{
-          backgroundColor: '#ffffff',
-          borderBottom: `1px solid #e5e7eb`,
-          height: 'auto',
-        }}
-      >
-        <div style={{
-          maxWidth: 1400,
-          margin: '0 auto',
-        }}>
-          <Flex align="center">
-            <Link to={ROUTE_TEC_DOC.SEARCH_SUPPLIERS} className="header-link">
-              <Space size={6}>
-                <ArrowLeftOutlined/>
-                <span>Назад к поиску поставщиков</span>
-              </Space>
-            </Link>
-          </Flex>
-        </div>
-      </Header>
+    <PageLayout
+      maxWidth={900}
+      header={
+        <PageHeader
+          backLink={{
+            to: ROUTE_TEC_DOC.SEARCH_SUPPLIERS,
+            label: 'Назад к поиску поставщиков',
+          }}
+        />
+      }
+    >
+      <SupplierDetailsCard
+        supplier={supplier}
+        details={details}
+      />
 
-      <Content style={{padding: `32px 24px 48px`, overflow: 'auto'}}>
-        <div style={{maxWidth: 896, margin: '0 auto'}}>
-          <SupplierDetailsCard
-            supplier={supplier}
-            details={details}
-          />
-        </div>
-      </Content>
-    </Layout>
+    </PageLayout>
   )
 }
