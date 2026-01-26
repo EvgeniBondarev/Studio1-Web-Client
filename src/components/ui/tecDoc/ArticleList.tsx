@@ -1,4 +1,4 @@
-import { Card, Table, Skeleton, Empty } from 'antd'
+import {Card, Table, Skeleton, Empty, Flex, Space, Typography, Row, Col} from 'antd'
 import {CalendarOutlined, InboxOutlined} from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import type { ColumnsType } from 'antd/es/table'
@@ -6,6 +6,8 @@ import type {ArticleDocument} from '../../../api/TecDoc/api/types.ts';
 import type {ViewMode} from '../../../api/TecDoc/utils/view-preferences.ts';
 import {formatDate} from '../../../api/TecDoc/utils.ts';
 import {ROUTE_GENERATE_TEC_DOC} from '../../tecDocPage/constants/routes.ts';
+
+const {Text, Paragraph}=Typography;
 
 interface ArticleListProps {
   articles: ArticleDocument[]
@@ -22,211 +24,165 @@ export function ArticleList({
 
   /* ---------------- LOADING ---------------- */
   if (isLoading) {
-    if (viewMode === 'rows') {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <Skeleton active paragraph={{ rows: 1 }} />
-            </Card>
-          ))}
-        </div>
-      )
-    }
-
     return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <Space orientation="vertical" size={8} style={{ width: '100%' }}>
         {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i}>
-            <Skeleton active paragraph={{ rows: 2 }} />
+            <Skeleton active paragraph={{ rows: 1 }} />
           </Card>
         ))}
-      </div>
+      </Space>
     )
   }
 
   /* ---------------- EMPTY ---------------- */
   if (!articles.length) {
     return (
-      <div style={{ padding: 48, textAlign: 'center' }}>
-        <Empty
-          description="Артикулы не найдены"
-        />
-      </div>
+      <Flex justify="center" align="center">
+        <Empty description="Артикулы не найдены" />
+      </Flex>
     )
   }
 
   /* ---------------- ROWS VIEW ---------------- */
-  if (viewMode === 'rows') {
-    const columns: ColumnsType<ArticleDocument> = [
-      {
-        title: 'Номер артикула',
-        dataIndex: 'dataSupplierArticleNumber',
-        key: 'article',
-        render: (value) => (
-          <span style={{ fontWeight: 600 }}>{value}</span>
-        ),
-      },
-      {
-        title: 'Поставщик',
-        dataIndex: 'supplierDescription',
-        key: 'supplier',
-      },
-      {
-        title: 'Описание',
-        key: 'description',
-        render: (_, record) => (
-          <div style={{ maxWidth: 400 }}>
-            <div style={{ fontWeight: 500 }}>
-              {record.normalizedDescription}
-            </div>
-            {record.description && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: '#888',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {record.description}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        title: 'Количество',
-        key: 'quantity',
-        render: (_, record) =>
-          record.quantityPerPackingUnit ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <InboxOutlined />
-              {record.quantityPerPackingUnit} шт.
-            </span>
-          ) : (
-            <span style={{ color: '#bbb' }}>—</span>
-          ),
-      },
-      {
-        title: 'Дата',
-        key: 'date',
-        render: (_, record) => (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CalendarOutlined />
-            {formatDate(record.indexedAt)}
-          </span>
-        ),
-      },
-    ]
-
-    return (
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={articles}
-        pagination={false}
-        onRow={(record) => ({
-          onClick: () =>
-            navigate(ROUTE_GENERATE_TEC_DOC.articleDetail(record.supplierId,record.dataSupplierArticleNumber)),
-          style: { cursor: 'pointer' },
-        })}
-      />
-    )
-  }
-
-  /* ---------------- CARDS VIEW ---------------- */
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: 16,
-      }}
-    >
-      {articles.map((article) => (
-        <Card
-          key={article.id}
-          hoverable
-          onClick={() =>
-            navigate(ROUTE_GENERATE_TEC_DOC.articleDetail(article.supplierId,article.dataSupplierArticleNumber))
-          }
-          style={{
-            height: '100%',
-            cursor: 'pointer',
-          }}
-        >
-          <div style={{ marginBottom: 8 }}>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 600,
-                marginBottom: 4,
-              }}
-            >
-              {article.dataSupplierArticleNumber}
-            </div>
-            <div style={{ fontSize: 13, color: '#888' }}>
-              {article.supplierDescription}
-            </div>
-          </div>
+    <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+      {/* ---------------- ROWS VIEW ---------------- */}
+      {viewMode === 'rows' && (() => {
+        const columns: ColumnsType<ArticleDocument> = [
+          {
+            title: 'Номер артикула',
+            dataIndex: 'dataSupplierArticleNumber',
+            key: 'article',
+            render: (value) => <Text strong>{value}</Text>,
+          },
+          {
+            title: 'Поставщик',
+            dataIndex: 'supplierDescription',
+            key: 'supplier',
+          },
+          {
+            title: 'Описание',
+            key: 'description',
+            render: (_, record) => (
+              <Flex vertical style={{ maxWidth: 400 }}>
+                <Text strong>{record.normalizedDescription}</Text>
+                {record.description && (
+                  <Text
+                    type="secondary"
+                    ellipsis
+                    style={{ fontSize: 12 }}
+                  >
+                    {record.description}
+                  </Text>
+                )}
+              </Flex>
+            ),
+          },
+          {
+            title: 'Количество',
+            key: 'quantity',
+            render: (_, record) =>
+              record.quantityPerPackingUnit ? (
+                <Space size={6}>
+                  <InboxOutlined />
+                  {record.quantityPerPackingUnit} шт.
+                </Space>
+              ) : (
+                <Text type="secondary">—</Text>
+              ),
+          },
+          {
+            title: 'Дата',
+            key: 'date',
+            render: (_, record) => (
+              <Space size={6}>
+                <CalendarOutlined />
+                {formatDate(record.indexedAt)}
+              </Space>
+            ),
+          },
+        ]
 
-          <div
-            style={{
-              color: '#555',
-              marginBottom: 8,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {article.normalizedDescription}
-          </div>
+        return (
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={articles}
+            pagination={false}
+            tableLayout={'fixed'}
+            onRow={(record) => ({
+              onClick: () =>
+                navigate(
+                  ROUTE_GENERATE_TEC_DOC.articleDetail(
+                    record.supplierId,
+                    record.dataSupplierArticleNumber
+                  )
+                ),
+              style: { cursor: 'pointer',  width: '100%' },
+            })}
+          />
+        )
+      })()}
 
-          {article.description && (
-            <div
-              style={{
-                fontSize: 13,
-                color: '#777',
-                marginBottom: 8,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {article.description}
-            </div>
-          )}
+      {/* ---------------- CARDS VIEW ---------------- */}
+      {viewMode === 'cards' && (
+        <Row gutter={[16, 16]}>
+          {articles.map((article) => (
+            <Col key={article.id} xs={24} sm={12} md={8} lg={6}>
+              <Card
+                hoverable
+                onClick={() =>
+                  navigate(
+                    ROUTE_GENERATE_TEC_DOC.articleDetail(
+                      article.supplierId,
+                      article.dataSupplierArticleNumber
+                    )
+                  )
+                }
+                style={{ height: '100%', cursor: 'pointer' }}
+              >
+                <Space orientation="vertical" size={4} style={{ marginBottom: 8 }}>
+                  <Text strong style={{ fontSize: 16 }}>
+                    {article.dataSupplierArticleNumber}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    {article.supplierDescription}
+                  </Text>
+                </Space>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              fontSize: 12,
-              color: '#999',
-            }}
-          >
-            {article.quantityPerPackingUnit && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <InboxOutlined />
-                {article.quantityPerPackingUnit} шт.
-              </span>
-            )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <CalendarOutlined />
-              {formatDate(article.indexedAt)}
-            </span>
-          </div>
-        </Card>
-      ))}
+                <Paragraph style={{ marginBottom: 8 }} ellipsis={{ rows: 2 }}>
+                  {article.normalizedDescription}
+                </Paragraph>
+
+                {article.description && (
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: 13, marginBottom: 8 }}
+                    ellipsis
+                  >
+                    {article.description}
+                  </Text>
+                )}
+
+                <Space size={16} style={{ fontSize: 12 }}>
+                  {article.quantityPerPackingUnit && (
+                    <Space size={6}>
+                      <InboxOutlined />
+                      {article.quantityPerPackingUnit} шт.
+                    </Space>
+                  )}
+
+                  <Space size={6}>
+                    <CalendarOutlined />
+                    {formatDate(article.indexedAt)}
+                  </Space>
+                </Space>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   )
 }
