@@ -15,7 +15,7 @@ export const PageLayout = ({
                              maxWidth = 1200
                            }: Props) => {
   return (
-    <Layout style={{minHeight: '100vh', background: '#f5f5f5'}}>
+    <Layout style={{minHeight: '100vh'}}>
       <Header
         style={{
           background: '#ffffff',
