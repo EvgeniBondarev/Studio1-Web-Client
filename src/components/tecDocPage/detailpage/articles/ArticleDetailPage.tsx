@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react'
-import {Link, useParams} from 'react-router-dom'
-import {Spin, Alert, Layout, Row, Col, Typography, Space, Flex} from 'antd'
-import {ArrowLeftOutlined, LeftCircleOutlined} from '@ant-design/icons'
+import { useParams} from 'react-router-dom'
+import {Spin, Alert, Row, Col, Typography, Space} from 'antd'
+import {LeftCircleOutlined} from '@ant-design/icons'
 import '../../tecDoc.css'
 import {SearchInput} from '../../../ui/search-input.tsx';
 import {
@@ -18,9 +18,10 @@ import type {ArticleSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 import {useFilteredAttributes} from '../../useFilteredAttributes.ts';
 import {useArticleByExactMatch} from '../../useArticleByExactMatch.ts';
 import '../../tecDoc.css'
+import {PageLayout} from '../../../ui/tecDoc/PageLayout.tsx';
+import {PageHeader} from '../../../ui/tecDoc/PageHeader.tsx';
 
 const {Text} = Typography;
-const {Header, Content} = Layout
 
 // ================= utils =================
 
@@ -195,37 +196,18 @@ export const ArticleDetailPage = () => {
   // ===== render =====
 
   return (
-    <Layout style={{minHeight: '100vh', background: '#f5f5f5', overflow: 'auto',}}>
-
-      <Header
-        style={{
-          backgroundColor: '#ffffff',
-          borderBottom: `1px solid #e5e7eb`,
-          height: 'auto',
-        }}
+    <PageLayout
+        maxWidth={1400}
+        header={
+          <PageHeader
+            backLink={{
+              to: searchUrl,
+              label: 'Назад к поиску',
+            }}
+          />
+        }
       >
-        <div style={{
-          maxWidth: 1400,
-          margin: '0 auto',
-        }}>
-          <Flex>
-            <Link to={searchUrl} className="header-link">
-              <Space size={6}>
-                <ArrowLeftOutlined/>
-                <span>Назад к поиску</span>
-              </Space>
-            </Link>
-          </Flex>
-          </div>
-      </Header>
 
-      <Content
-        style={{
-          maxWidth: 1400,
-          margin: '0 auto',
-          padding: 24,
-        }}
-      >
         {/* Глобальный поиск */}
         {hasData && (
           <div style={{marginBottom: 24}}>
@@ -342,8 +324,7 @@ export const ArticleDetailPage = () => {
             </Space>
           </Col>
         </Row>
-      </Content>
-    </Layout>
+    </PageLayout>
   )
 }
 

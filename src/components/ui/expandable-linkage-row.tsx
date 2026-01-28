@@ -58,38 +58,30 @@ export function ExpandableLinkageRow({
         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
-        <td style={{padding: 12, color: '#6b7280'}}>
-          <Text type="secondary">{index + 1}</Text>
+        <td style={{padding: 8, color: '#6b7280'}}>
+          <Text type="secondary">{index}</Text>
         </td>
 
         <td style={{padding: 8}}>
-          <Space orientation="vertical" size={1}>
-            <Tag
-              color="blue"
-              style={{
-                fontWeight: 500,
-                fontSize: 10,
-                lineHeight: '14px',
-                padding: '2px 6px',
-              }}
-            >
+          <Space orientation="vertical" size={2}>
+            <Tag color="blue">
               {getLinkageTypeLabel(linkage.linkageTypeId)}
             </Tag>
-            <Text type="secondary" style={{fontSize: 10}}>
+            <Text type="secondary" style={{fontSize: 12}}>
               ({linkage.linkageTypeId})
             </Text>
           </Space>
         </td>
 
         <td style={{padding: 8, fontSize: 12}}>
-          <Text code style={{color: '#6b7280', fontSize: 12}}>
+          <Text code>
             {linkage.linkageId}
           </Text>
         </td>
 
-        <td style={{padding: '8px 12px', fontSize: 12}}>
+        <td style={{padding: 8, fontSize: 12}}>
           {vehicle ? (
-            <Space orientation="vertical" size={4} style={{width: '100%'}}>
+            <Space orientation="vertical" size={2} style={{width: '100%'}}>
               <Text strong style={{color: '#111827'}}>
                 {vehicle.description}
               </Text>
@@ -110,25 +102,19 @@ export function ExpandableLinkageRow({
           )}
         </td>
 
-        <td style={{padding: 8, fontSize: 12}}>
+        <td style={{padding: 8}}>
           {model ? (
-            <Space orientation="vertical" size={4} style={{width: '100%'}}>
+            <Space orientation="vertical" size={1} style={{width: '100%'}}>
               {manufacturer && (
-                <Text strong style={{color: '#111827'}}>
+                <Text strong >
                   {manufacturer.description}
                 </Text>
               )}
-              <Text style={{color: '#374151'}}>{model.description}</Text>
+              <Text type={'secondary'}>{model.description}</Text>
               {model.fullDescription && model.fullDescription !== model.description && (
-                <Paragraph
-                  style={{
-                    fontSize: 10,
-                    color: '#6b7280',
-                    margin: 0,
-                  }}
-                >
+                <Text type={'secondary'} >
                   {model.fullDescription}
-                </Paragraph>
+                </Text>
               )}
             </Space>
           ) : (
@@ -136,7 +122,7 @@ export function ExpandableLinkageRow({
           )}
         </td>
 
-        <td style={{padding: 8, fontSize: 12}}>
+        <td style={{padding: 8}}>
           <Text type="secondary">
             {vehicle?.constructionInterval || model?.constructionInterval || '—'}
           </Text>
@@ -159,17 +145,11 @@ export function ExpandableLinkageRow({
       </tr>
 
       {isExpanded && attributes.length > 0 && (
-        <tr style={{backgroundColor: '#f9fafb'}}>
-          <td colSpan={7} style={{padding: 8}}>
+        <tr>
+          <td colSpan={7} >
             <Card
               size="small"
-              bordered={false}
-              style={{
-                backgroundColor: 'transparent',
-                boxShadow: 'none',
-                padding: 0,
-              }}
-              bodyStyle={{padding: 0}}
+              styles={{body:{padding: 0}}}
             >
               <Table
                 dataSource={attributes.map((attr, idx) => ({
@@ -179,17 +159,6 @@ export function ExpandableLinkageRow({
                 columns={attributeColumns}
                 pagination={false}
                 size="small"
-                style={{fontSize: 12}}
-                onRow={() => ({
-                  onMouseEnter: (e) => {
-                    const tr = e.currentTarget.closest('tr')
-                    if (tr) tr.style.backgroundColor = '#ffffff'
-                  },
-                  onMouseLeave: (e) => {
-                    const tr = e.currentTarget.closest('tr')
-                    if (tr) tr.style.backgroundColor = 'transparent'
-                  },
-                })}
               />
             </Card>
           </td>

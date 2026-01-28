@@ -2,6 +2,8 @@ import {Card, Input, Typography, Space, Tag, Empty} from 'antd';
 import {PaginatedTable} from '../../paginated-table.tsx';
 import type {CrossDto} from '../../../../api/TecDoc/api/types.ts';
 
+const {Text, Title}=Typography;
+
 type Props = {
   filteredCrosses: CrossDto[],
   crossesSearch: string,
@@ -21,11 +23,68 @@ export const Cross = ({
   const showCount = crossesSearch || globalSearch;
   const resultCount = filteredCrosses.length;
 
+  const crossColumns = [
+    {
+      title: '№',
+      key: 'index',
+      width: 50,
+      render: (_: any, __: any, index: number) => {
+        return (
+          <Text type="secondary">
+            {index + 1}
+          </Text>
+        );
+      },
+    },
+    {
+      title: 'Номер артикула',
+      key: 'articleNumber',
+      width: 200,
+      render: (record: CrossDto) => (
+        <Text
+          strong
+        >
+          {record.oeNbr || record.oENbr || '—'}
+        </Text>
+      ),
+    },
+    {
+      title: 'Производитель',
+      key: 'manufacturer',
+      width: 200,
+      render: (record: CrossDto) =>
+        record.manufacturer ? (
+          <Tag
+            color="blue"
+            style={{
+              fontWeight: 500,
+              borderRadius: 4,
+              margin: 3,
+            }}
+          >
+            {record.manufacturer.description}
+          </Tag>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: 'ID производителя',
+      key: 'manufacturerId',
+      width: 120,
+      render: (record: CrossDto) => (
+        <Text type="secondary">
+          {record.manufacturerId}
+        </Text>
+      ),
+    },
+  ]
+
   return (
     <Card
-      title={<Typography.Title level={4}>
+      title={<Title level={4}>
         Аналоги (кроссы) {resultCount}{showCount ? ` из ${crossesLength}` : ''}
-      </Typography.Title>}
+      </Title>}
     >
 
       <div>
@@ -40,90 +99,10 @@ export const Cross = ({
           {resultCount > 0 ? (
             <PaginatedTable
               items={filteredCrosses}
-              itemsPerPage={20}
-              showAllThreshold={30}
-              headers={
-                <thead>
-                <tr style={{borderBottom: '1px solid #e5e7eb', backgroundColor: '#fafafa'}}>
-                  {[
-                    '№',
-                    'Номер артикула',
-                    'Производитель',
-                    'ID производителя',
-                  ].map((header, idx) => (
-                    <th
-                      key={idx}
-                      style={{
-                        textAlign: 'left',
-                        padding: 8,
-                      }}
-                    >
-                      <Typography.Text type="secondary" style={{fontSize: 12}}>
-                        {header}
-                      </Typography.Text>
-                    </th>
-                  ))}
-                </tr>
-                </thead>
-              }
-              renderRow={(cross, idx) => (
-                <tr
-                  key={idx}
-                  style={{
-                    borderBottom: '1px solid #f3f4f6',
-                    cursor: 'default',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = '#fafafa')
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = 'transparent')
-                  }
-                >
-                  <td style={{padding: '12px 16px', fontSize: 12}}>
-                    <Typography.Text type="secondary">
-                      {idx + 1}
-                    </Typography.Text>
-                  </td>
-
-                  <td style={{padding: '12px 16px', fontSize: 12}}>
-                    <Typography.Text
-                      strong
-                      style={{
-                        fontSize: 12
-                      }}
-                    >
-                      {cross.oeNbr || cross.oENbr || '—'}
-                    </Typography.Text>
-                  </td>
-
-                  <td style={{padding: '12px 16px', fontSize: 12}}>
-                    {cross.manufacturer ? (
-                      <Tag
-                        color="blue"
-                        style={{
-                          fontWeight: 500,
-                          fontSize: 12,
-                          borderRadius: 4,
-                        }}
-                      >
-                        {cross.manufacturer.description}
-                      </Tag>
-                    ) : (
-                      <Typography.Text type="secondary">—</Typography.Text>
-                    )}
-                  </td>
-
-                  <td style={{padding: 12, fontSize: 12}}>
-                    <Typography.Text type="secondary">
-                      {cross.manufacturerId}
-                    </Typography.Text>
-                  </td>
-                </tr>
-              )}
+              columns={crossColumns}
             />
           ) : (
-            <Empty description={"Кроссы не найдены"}/>
+            <Empty description={'Кроссы не найдены'}/>
           )}
         </Space>
       </div>

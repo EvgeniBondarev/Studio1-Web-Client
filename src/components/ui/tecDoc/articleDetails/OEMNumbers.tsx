@@ -2,6 +2,8 @@ import {Card, Input, Typography, Space, Tag, Empty} from 'antd';
 import type {OeNumberDto} from '../../../../api/TecDoc/api/types.ts';
 import {PaginatedTable} from '../../paginated-table.tsx';
 
+const {Text, Title}=Typography;
+
 type Props = {
   filteredOeNumbers: OeNumberDto[]
   oeNumbersSearch: string
@@ -20,12 +22,47 @@ export const OEMNumbers = ({
   const resultCount = filteredOeNumbers.length;
   const showCountInfo = oeNumbersSearch || globalSearch;
 
+  const oeColumns = [
+    {
+      title: '№',
+      key: 'index',
+      width: 60,
+      render: (_: any, __: any, index: number) => (
+        <Text type="secondary">{index + 1}</Text>
+      ),
+    },
+    {
+      title: 'OEM номер',
+      key: 'oeNumber',
+      render: (record: OeNumberDto) => (
+        <Text code>
+          {record.oeNbr || record.oENbr || '—'}
+        </Text>
+      ),
+    },
+    {
+      title: 'Тип',
+      key: 'type',
+      render: (record: OeNumberDto) => (
+        record.isAdditive ? (
+          <Tag color="blue" style={{backgroundColor: '#dbeafe', color: '#1e40af'}}>
+            Добавка
+          </Tag>
+        ) : (
+          <Tag color="green" style={{backgroundColor: '#dcfce7', color: '#166534'}}>
+            Основной номер
+          </Tag>
+        )
+      ),
+    },
+  ]
+
   return (
     <Card
       title={
-        <Typography.Title level={4} style={{margin: 0}}>
+        <Title level={4} style={{margin: 0}}>
           {`OEM номера (${resultCount}) ${showCountInfo ? ` из ${oeNumbersLength}` : ''}`}
-        </Typography.Title>
+        </Title>
       }
     >
       <Space orientation="vertical" size={16} style={{width: '100%'}}>
@@ -39,78 +76,7 @@ export const OEMNumbers = ({
         {resultCount > 0 ? (
           <PaginatedTable
             items={filteredOeNumbers}
-            itemsPerPage={20}
-            showAllThreshold={30}
-            headers={
-              <thead>
-              <tr style={{borderBottom: '1px solid #e5e7eb', backgroundColor: '#fafafa'}}>
-                {['№', 'OEM номер', 'Тип']
-                  .map((header, idx) => (
-                    <th
-                      key={idx}
-                      style={{
-                        textAlign: 'left',
-                        padding: 8,
-                      }}
-                    >
-                      <Typography.Text type="secondary" style={{fontSize: 12}}>
-                        {header}
-                      </Typography.Text>
-                    </th>
-                  ))}
-              </tr>
-              </thead>
-            }
-            renderRow={(oe, idx) => (
-              <tr
-                key={idx}
-                style={{borderBottom: '1px solid #f3f4f6', cursor: 'default'}}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#fafafa')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = 'transparent')
-                }
-              >
-                <td style={{padding: 8}}>
-                  <Typography.Text type="secondary" style={{fontSize: 12}}>
-                    {idx + 1}
-                  </Typography.Text>
-                </td>
-
-                <td style={{padding: 8}}>
-                  <Typography.Text code>
-                    {oe.oeNbr || oe.oENbr || '—'}
-                  </Typography.Text>
-                </td>
-
-                <td style={{padding: 8}}>
-                  {oe.isAdditive ? (
-                    <Tag
-                      color="blue"
-                      style={{
-                        fontSize: 12,
-                        backgroundColor: '#dbeafe',
-                        color: '#1e40af',
-                      }}
-                    >
-                      Добавка
-                    </Tag>
-                  ) : (
-                    <Tag
-                      color="green"
-                      style={{
-                        fontSize: 12,
-                        backgroundColor: '#dcfce7',
-                        color: '#166534',
-                      }}
-                    >
-                      Основной номер
-                    </Tag>
-                  )}
-                </td>
-              </tr>
-            )}
+            columns={oeColumns}
           />
         ) : oeNumbersSearch || globalSearch ? (
           <Empty description={`По запросу "${oeNumbersSearch || globalSearch}" ничего не найдено`}/>

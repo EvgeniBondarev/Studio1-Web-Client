@@ -1,10 +1,11 @@
-import { useNavigate } from 'react-router-dom'
-import {Card, Table, Empty, Row, Col, Tag, Space, Skeleton} from 'antd'
-import {BuildOutlined, PauseOutlined, CalendarOutlined} from '@ant-design/icons'
+import {useNavigate} from 'react-router-dom'
+import {Card, Table, Empty, Row, Col, Tag, Space, Skeleton, Flex, Typography} from 'antd'
+import {CalendarOutlined} from '@ant-design/icons'
 import type {SupplierDocument} from '../../../api/TecDoc/api/types.ts';
 import {formatDate} from '../../../api/TecDoc/utils.ts';
 import {ROUTE_GENERATE_TEC_DOC} from '../../tecDocPage/constants/routes.ts';
 
+const {Text, Title} = Typography
 
 interface Props {
   suppliers: SupplierDocument[]
@@ -12,102 +13,76 @@ interface Props {
   viewMode?: 'cards' | 'rows'
 }
 
-export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=> {
+export const SupplierList = ({suppliers, isLoading, viewMode = 'cards'}: Props) => {
   const navigate = useNavigate()
 
   if (isLoading) {
-    if (viewMode === 'rows') {
-      return (
-        <div style={{
-          border: '1px solid #f0f0f0',
-          borderRadius: '8px',
-          overflow: 'hidden'
-        }}>
-          <Skeleton active paragraph={{ rows: 6 }} />
-        </div>
-      )
-    }
-
     return (
-      <Row gutter={[16, 16]}>
-        {[...Array(6)].map((_, i) => (
-          <Col xs={24} sm={12} lg={8} key={i}>
-            <Card style={{ height: '100%' }}>
-              <Skeleton active paragraph={{ rows: 3 }} />
-            </Card>
-          </Col>
+      <Space orientation="vertical" size={8} style={{width: '100%'}}>
+        {Array.from({length: 6}).map((_, i) => (
+          <Card key={i}>
+            <Skeleton active paragraph={{rows: 1}}/>
+          </Card>
         ))}
-      </Row>
+      </Space>
     )
   }
 
-  if (suppliers.length === 0) {
+  if (!suppliers.length) {
     return (
-      <div style={{
-        textAlign: 'center',
-        padding: '48px 24px',
-        backgroundColor: '#fff',
-        borderRadius: '8px'
-      }}>
-        <Empty
-          image={<BuildOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} />}
-          description="Поставщики не найдены"
-        />
-      </div>
+      <Flex justify="center" align="center">
+        <Empty description="Поставщики не найдены"/>
+      </Flex>
     )
   }
 
+  /* ---------------- ROWS VIEW ---------------- */
   if (viewMode === 'rows') {
     const columns = [
       {
         title: 'Название',
         dataIndex: 'description',
         key: 'description',
-        render: (text: string) => (
-          <span style={{ fontWeight: 500, color: '#000' }}>{text}</span>
-        ),
+        render: (text: string) => <Text strong>{text}</Text>,
       },
       {
         title: 'Код',
         dataIndex: 'matchcode',
         key: 'matchcode',
-        width: 120,
-        render: (text: string) => (
-          <Tag color="blue" style={{ margin: 0 }}>{text}</Tag>
-        ),
+        render: (text: string) => <Tag color="blue">{text}</Tag>,
       },
       {
         title: 'Артикулов',
         dataIndex: 'nbrOfArticles',
         key: 'nbrOfArticles',
-        width: 120,
-        render: (nbrOfArticles: number | undefined) => (
-          <Space size="small" style={{ color: nbrOfArticles ? '#000' : '#bfbfbf' }}>
-            <PauseOutlined />
-            {nbrOfArticles ? nbrOfArticles.toLocaleString() : '—'}
+        render: (value?: number) => value ? (
+          <Space size={6}>
+            {value.toLocaleString()}
           </Space>
+        ) : (
+          <Text type="secondary">—</Text>
         ),
       },
       {
         title: 'Версия данных',
         dataIndex: 'dataVersion',
         key: 'dataVersion',
-        width: 140,
-        render: (dataVersion: string) => (
-          <span style={{ color: dataVersion ? '#000' : '#bfbfbf' }}>
-            {dataVersion || '—'}
-          </span>
+        render: (value: string) => value ? (
+          <Text>{value}</Text>
+        ) : (
+          <Text type="secondary">—</Text>
         ),
       },
       {
         title: 'Дата',
         dataIndex: 'indexedAt',
         key: 'indexedAt',
-        width: 120,
         render: (date: string) => (
-          <Space size="small" style={{ color: '#666', fontSize: '12px' }}>
+          <Space size={6}>
             <CalendarOutlined />
-            {formatDate(date)}
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {formatDate(date)}
+            </Typography.Text>
           </Space>
         ),
       },
@@ -116,103 +91,88 @@ export const SupplierList=({ suppliers, isLoading, viewMode = 'cards' }: Props)=
     const dataSource = suppliers.map(supplier => ({
       key: supplier.id,
       ...supplier,
-      onClick: () => navigate(ROUTE_GENERATE_TEC_DOC.supplierDetail(supplier.supplierId)),
+      onClick: () => navigate(
+        ROUTE_GENERATE_TEC_DOC.supplierDetail(
+          supplier.supplierId
+        )),
     }))
 
     return (
-      <div style={{
-        border: '1px solid #f0f0f0',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        backgroundColor: '#fff'
-      }}>
         <Table
           columns={columns}
           dataSource={dataSource}
           pagination={false}
-          size="middle"
           onRow={(record) => ({
             onClick: record.onClick,
-            style: {
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            },
-            onMouseEnter: (e) => {
-              e.currentTarget.style.backgroundColor = '#f5f5f5'
-            },
-            onMouseLeave: (e) => {
-              e.currentTarget.style.backgroundColor = ''
-            }
+            style: { cursor: 'pointer' },
           })}
-          style={{ border: 'none' }}
         />
-      </div>
     )
   }
 
-  // Карточный вид
+  {/* ---------------- CARDS VIEW ---------------- */}
   return (
     <Row gutter={[16, 16]}>
       {suppliers.map((supplier) => (
-        <Col xs={24} sm={12} lg={8} key={supplier.id}>
+        <Col xs={24} sm={12} md={8} lg={6} key={supplier.id}>
           <Card
             hoverable
-            onClick={() => navigate(ROUTE_GENERATE_TEC_DOC.supplierDetail(supplier.supplierId))}
-            style={{
-              height: '100%',
-              border: '1px solid #f0f0f0',
-              borderRadius: '8px',
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-            }}
-            bodyStyle={{
-              padding: '16px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
+            onClick={() =>
+              navigate(
+                ROUTE_GENERATE_TEC_DOC.supplierDetail(supplier.supplierId)
+              )
+            }
+            style={{ height: '100%', cursor: 'pointer' }}
           >
-            <div style={{ marginBottom: '12px' }}>
-              <h4 style={{
-                margin: 0,
-                marginBottom: '4px',
-                fontSize: '16px',
-                fontWeight: 500,
-                color: '#000'
-              }}>
-                {supplier.description}
-              </h4>
-              <Space size="small" style={{ color: '#666', fontSize: '12px' }}>
-                Код: <Tag color="blue" style={{ margin: 0 }}>{supplier.matchcode}</Tag>
-              </Space>
-            </div>
+            <Flex vertical style={{ height: '100%' }}>
+              <Space orientation="vertical" size={4}>
+                <Title
+                  level={5}
+                  style={{ margin: 0, color: '#000' }}
+                >
+                  {supplier.description}
+                </Title>
 
-            <div style={{ marginTop: 'auto' }}>
-              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+                <Space size="small">
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Код:
+                  </Text>
+                  <Tag color="blue" style={{ margin: 0 }}>
+                    {supplier.matchcode}
+                  </Tag>
+                </Space>
+              </Space>
+
+              <Space
+                orientation="vertical"
+                size="small"
+                style={{ marginTop: 'auto' }}
+              >
                 {supplier.nbrOfArticles !== undefined && (
-                  <Space size="small" style={{ color: '#666', fontSize: '14px' }}>
-                    <PauseOutlined />
-                    <span>
+                  <Space size="small">
+                    <Text>
                       Артикулов:{' '}
-                      <span style={{ fontWeight: 500, color: '#000' }}>
+                      <Text strong>
                         {supplier.nbrOfArticles.toLocaleString()}
-                      </span>
-                    </span>
+                      </Text>
+                    </Text>
                   </Space>
                 )}
 
                 {supplier.dataVersion && (
-                  <div style={{ color: '#666', fontSize: '14px' }}>
+                  <Text type="secondary">
                     Версия данных: {supplier.dataVersion}
-                  </div>
+                  </Text>
                 )}
 
-                <Space size="small" style={{ color: '#999', fontSize: '12px' }}>
+                <Space size="small">
                   <CalendarOutlined />
-                  {formatDate(supplier.indexedAt)}
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {formatDate(supplier.indexedAt)}
+                  </Text>
                 </Space>
               </Space>
-            </div>
+            </Flex>
           </Card>
         </Col>
       ))}

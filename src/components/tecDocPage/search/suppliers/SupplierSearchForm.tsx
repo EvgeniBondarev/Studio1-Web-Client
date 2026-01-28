@@ -1,11 +1,8 @@
 import { useState } from 'react'
-import {Input, Button, Select, Checkbox, Form, Flex} from 'antd'
+import {Input, Button, Select, Checkbox, Form, Space, Col, Row} from 'antd'
 import {SearchOutlined, SortAscendingOutlined} from '@ant-design/icons'
 import type {SupplierSearchRequest} from '../../../../api/TecDoc/api/types.ts';
 
-
-const { Option } = Select
-const { Item: FormItem } = Form
 
 interface Props {
   onSubmit: (request: SupplierSearchRequest) => void
@@ -37,39 +34,20 @@ export const SupplierSearchForm=({
   return (
     <Form
       onFinish={handleSubmit}
-      style={{ width: '100%', padding: '0' }}
       layout="vertical"
+      style={{ width: '100%' }}
     >
       {/* Первая строка: поиск и кнопка */}
-      <Flex
-        gap={8}
-        align="flex-end"
-        wrap="wrap"
-        style={{ marginBottom: '16px' }}
-      >
-        <div style={{
-          position: 'relative',
-          flex: '1 1 300px',
-          minWidth: '200px'
-        }}>
-          <SearchOutlined style={{
-            position: 'absolute',
-            left: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 1,
-            color: '#bfbfbf',
-            fontSize: '16px'
-          }} />
-          <Input
-            size="large"
-            placeholder="Введите название поставщика или код..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ paddingLeft: '36px', width: '100%' }}
-            autoFocus
-          />
-        </div>
+      <Space.Compact style={{ width: '100%' }} size="middle">
+        <Input
+          size="large"
+          placeholder="Введите название поставщика или код..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          style={{ flex: 1 }}
+        />
 
         <Button
           type="primary"
@@ -81,19 +59,12 @@ export const SupplierSearchForm=({
         >
           Найти
         </Button>
-      </Flex>
+      </Space.Compact>
 
       {/* Вторая строка: сортировка и чекбокс */}
-      <Flex
-        gap={16}
-        align="center"
-        wrap="wrap"
-      >
-        <div style={{
-          flex: '1 1 200px',
-          minWidth: '200px'
-        }}>
-          <FormItem label="Сортировка" style={{ marginBottom: 0 }}>
+      <Row gutter={[16, 16]} align="middle" style={{ marginTop: 16 }}>
+        <Col flex="1 1 200px">
+          <Form.Item label="Сортировка" style={{ marginBottom: 0 }}>
             <Select
               value={sortBy}
               onChange={(value: any) => setSortBy(value)}
@@ -101,22 +72,25 @@ export const SupplierSearchForm=({
               size="middle"
               suffixIcon={<SortAscendingOutlined />}
             >
-              <Option value="relevance">По релевантности</Option>
-              <Option value="description">По описанию</Option>
-              <Option value="matchcode">По коду</Option>
-              <Option value="nbrOfArticles">По количеству артикулов</Option>
+              <Select.Option value="relevance">По релевантности</Select.Option>
+              <Select.Option value="description">По описанию</Select.Option>
+              <Select.Option value="matchcode">По коду</Select.Option>
+              <Select.Option value="nbrOfArticles">По количеству артикулов</Select.Option>
             </Select>
-          </FormItem>
-        </div>
+          </Form.Item>
+        </Col>
 
-        <Checkbox
-          checked={sortDescending}
-          onChange={(e) => setSortDescending(e.target.checked)}
-          style={{ marginTop: '24px', flexShrink: 0 }}
-        >
-          По убыванию
-        </Checkbox>
-      </Flex>
+        <Col>
+          <Form.Item label=" " style={{ marginBottom: 0 }}>
+            <Checkbox
+              checked={sortDescending}
+              onChange={(e) => setSortDescending(e.target.checked)}
+            >
+              По убыванию
+            </Checkbox>
+          </Form.Item>
+        </Col>
+      </Row>
     </Form>
   )
 }

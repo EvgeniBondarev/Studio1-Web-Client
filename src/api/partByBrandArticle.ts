@@ -17,5 +17,5 @@ export const fetchProductByBrandAndArticle = async (
     `,
     })
 
-    return response.value[0]
+    return response.value[0] ?? null
 }
