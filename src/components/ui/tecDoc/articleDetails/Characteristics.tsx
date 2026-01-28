@@ -21,6 +21,35 @@ export const Characteristics = ({
   const resultCount = filteredAttributes.length;
   const showCountInfo = attributesSearch || globalSearch;
 
+  const attributeColumns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 50
+    },
+    {
+      title: 'Описание',
+      dataIndex: 'description',
+      key: 'description',
+      width: 280,
+    },
+    {
+      title: 'Заголовок',
+      dataIndex: 'displayTitle',
+      key: 'displayTitle',
+      width: 200,
+      render: (text: string) => text || '-',
+    },
+    {
+      title: 'Значение',
+      dataIndex: 'displayValue',
+      key: 'displayValue',
+      width: 150,
+      render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
+    },
+  ]
+
   return (
     <Card
       title={<Typography.Title level={4} style={{margin: 0}}>
@@ -39,56 +68,7 @@ export const Characteristics = ({
         {resultCount > 0 ? (
           <PaginatedTable
             items={filteredAttributes}
-            itemsPerPage={20}
-            showAllThreshold={30}
-            headers={
-              <thead>
-              <tr style={{borderBottom: '1px solid #e5e7eb', backgroundColor: '#fafafa'}}>
-                {['ID', 'Описание', 'Заголовок', 'Значение',]
-                  .map((header, idx) => (
-                  <th
-                    key={idx}
-                    style={{
-                      textAlign: 'left',
-                      padding: 8,
-                      minWidth: 80,
-                    }}
-                  >
-                    <Typography.Text type="secondary" style={{fontSize: 12}}>
-                      {header}
-                    </Typography.Text>
-                  </th>
-                ))}
-              </tr>
-              </thead>
-            }
-            renderRow={(attribute) => (
-              <tr
-                key={attribute.id}
-                style={{
-                  borderBottom: '1px solid #f3f4f6',
-                  cursor: 'default',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <td style={{padding: 8, fontSize: 12}}>
-                  <Typography.Text type="secondary">{attribute.id}</Typography.Text>
-                </td>
-
-                <td style={{padding: 8, fontSize: 12}}>
-                  {attribute.description}
-                </td>
-
-                <td style={{padding: 8, fontSize: 12}}>
-                  {attribute.displayTitle || '-'}
-                </td>
-
-                <td style={{padding: 8, fontSize: 12}}>
-                  <Typography.Text strong>{attribute.displayValue}</Typography.Text>
-                </td>
-              </tr>
-            )}
+            columns={attributeColumns}
           />
         ) : attributesSearch || globalSearch ? (
           <Empty description={`По запросу "${attributesSearch || globalSearch}" ничего не найдено`}/>

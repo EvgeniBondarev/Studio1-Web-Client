@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {Card, Row, Col, Alert, Typography, Space, Flex} from 'antd'
+import {Card, Row, Col, Alert, Typography, Space, Flex, Pagination} from 'antd'
 import {SearchOutlined, WarningOutlined} from '@ant-design/icons'
 import type {SupplierSearchRequest, SupplierSearchResult} from '../../../../api/TecDoc/api/types.ts';
 import type {ApiError} from '../../../../api/TecDoc/api/client.ts';
@@ -8,7 +8,6 @@ import {supplierSearchService} from '../../../../api/TecDoc/api/services/supplie
 import {getViewMode, setViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
 import {Link} from 'react-router-dom';
 import {ViewToggle} from '../../../ui/view-toggle.tsx';
-import {Pagination} from '../../../ui/Pagination.tsx';
 import {SupplierSearchForm} from './SupplierSearchForm.tsx';
 import {SupplierList} from '../../../ui/tecDoc/SupplierList.tsx';
 import {PageLayout} from '../../../ui/tecDoc/PageLayout.tsx';
@@ -162,11 +161,14 @@ export const SearchSuppliersPage=()=> {
             />
 
             <Flex justify="center">
-              <Pagination
-                currentPage={data.page}
-                totalPages={data.totalPages}
-                onPageChange={handlePageChange}
-              />
+              {data.total > 20 && (
+                <Pagination current={data.page}
+                            total={data.total}
+                            pageSize={20}
+                            onChange={(page) => handlePageChange(page)}
+                            showSizeChanger={false}
+                            style={{marginTop: 24}}
+                />)}
             </Flex>
           </>
         )}

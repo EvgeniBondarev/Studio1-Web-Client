@@ -2,7 +2,7 @@ import type {ArticleSearchRequest, ArticleSearchResult} from '../../../../api/Te
 import { useState, useEffect, useCallback } from 'react'
 import {useSearchParams, useNavigate, Link} from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Card, Typography, Alert, Flex } from 'antd'
+import { Card, Typography, Alert, Flex, Pagination } from 'antd'
 import {AlertOutlined} from '@ant-design/icons'
 import '../../tecDoc.css'
 
@@ -13,7 +13,6 @@ import {saveSearchToHistory} from '../../../../api/TecDoc/utils/search-history.t
 import {ArticleList} from '../../../ui/tecDoc/ArticleList.tsx';
 import {ViewToggle} from '../../../ui/view-toggle.tsx';
 import {getViewMode, setViewMode, type ViewMode} from '../../../../api/TecDoc/utils/view-preferences.ts';
-import {Pagination} from '../../../ui/Pagination.tsx';
 import {parseArticleSearchParams, ROUTE_GENERATE_TEC_DOC, ROUTE_TEC_DOC} from '../../constants/routes.ts';
 import {PageLayout} from '../../../ui/tecDoc/PageLayout.tsx';
 import {PageHeader} from '../../../ui/tecDoc/PageHeader.tsx';
@@ -196,11 +195,15 @@ export  const SearchArticlesPage=()=> {
             />
 
             <Flex justify="center">
-              <Pagination
-                currentPage={data.page}
-                totalPages={data.totalPages}
-                onPageChange={handlePageChange}
-              />
+              {data.total > 20 && (
+                <Pagination current={data.page}
+                            total={data.total}
+                            pageSize={20}
+                            onChange={(page) => handlePageChange(page)}
+                            showSizeChanger={false}
+                            style={{marginTop: 24}}
+                />
+              )}
             </Flex>
           </>
         )}
