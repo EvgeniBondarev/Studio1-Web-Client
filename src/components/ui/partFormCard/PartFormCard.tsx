@@ -78,7 +78,9 @@ export const PartFormCard = ({
     return parsed.isValid() ? parsed.format('DD.MM.YYYY HH:mm') : value
   }
 
-  const fileImportValue = selectedSession ?? '—'
+  // `DetailsTab` ожидает строковые значения, а не объект целиком.
+  // "Файл импорта" соответствует `CtSession.Source`.
+  const fileImportValue = selectedSession?.Source ?? '—'
   const importDateValue = selectedSession ? formatSessionDate(selectedSession.Start) : '—'
 
   const {

@@ -12,8 +12,15 @@ export interface ODataQueryOptions {
   skip?: number
 }
 
-const baseURL = "https://studio-api.interparts.ru/odata" //'http://studio-api.interparts.ru/odata' // 'http://localhost:7091/odata'
-const apiToken = '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
+// Можно переопределить через .env (Vite подхватит переменные вида VITE_*).
+// Это нужно, чтобы локально отправлять запросы через proxy (и убрать CORS).
+const baseURL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'http://studio-api.interparts.ru/odata'
+
+const apiToken =
+  (import.meta.env.VITE_API_TOKEN as string | undefined) ??
+  '9IknRw3KF1aMeNZoZxWQYrWlOPn4Ivbt'
 
 const client: AxiosInstance = axios.create({
   baseURL, 
